@@ -53,7 +53,7 @@ export const useEditorDataStore = defineStore("editorData", {
           componentGap: 10,
           scale: 100,
           borderRadius: 10,
-          squeezing: ["leftTop", "leftTop2", "leftTop3"], // 可以挤压的画布
+          squeezing: ["leftTop"], // 可以挤压的画布
           obstacle: ["bottom", "right"], // 目标障碍物
           expansionDirection: "right",
           floatPosition: "left",
