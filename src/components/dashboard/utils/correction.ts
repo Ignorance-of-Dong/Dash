@@ -1,11 +1,10 @@
 import { useEditorDataStore } from "../store/editorData";
-import { componentList } from "./../cursorComponent/config";
 
 /*
  * @Author: zhangzheng
  * @Date: 2025-10-22 17:22:01
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-24 18:04:41
+ * @LastEditTime: 2025-10-27 19:17:16
  * @Description: 组件位置校正和重叠检测工具函数
  */
 
@@ -16,77 +15,6 @@ const OVERLAP_DETECTION_RATIO = {
   START: 1 / 5, // 五分之一
   END: 4 / 5, // 五分之四
 } as const;
-
-/** 最小边界安全距离 */
-const MIN_BOUNDARY_SAFE_DISTANCE = 1;
-
-/**
- * 计算动态边界安全距离
- * 根据重叠程度计算合适的安全距离
- * @param overlapAmount 重叠的像素数量
- * @param componentSize 组件尺寸（高度或宽度，用于计算比例）
- * @param adjustmentType 调整类型：'minimal' | 'standard' | 'generous'
- * @returns 计算出的安全距离
- */
-const calculateDynamicSafeDistance = (
-  overlapAmount: number,
-  componentSize?: number,
-  adjustmentType: "minimal" | "standard" | "generous" = "standard"
-): number => {
-  // 确保重叠量为正数
-  const absOverlap = Math.abs(overlapAmount);
-
-  // 基础安全距离策略
-  let safeDistance: number;
-
-  switch (adjustmentType) {
-    case "minimal":
-      // 最小调整：只解决重叠，几乎不留间隙
-      safeDistance = absOverlap + MIN_BOUNDARY_SAFE_DISTANCE;
-      break;
-
-    case "generous":
-      // 宽松调整：留出较大间隙
-      safeDistance =
-        absOverlap +
-        Math.max(MIN_BOUNDARY_SAFE_DISTANCE, Math.floor(absOverlap * 0.2));
-      break;
-
-    case "standard":
-    default:
-      // 标准调整：根据重叠比例智能调整
-      safeDistance = absOverlap + MIN_BOUNDARY_SAFE_DISTANCE;
-
-      if (componentSize && componentSize > 0) {
-        const overlapRatio = absOverlap / componentSize;
-
-        // 根据重叠比例调整安全距离
-        if (overlapRatio > 0.7) {
-          // 重叠超过70%，说明几乎完全重叠，需要更大的安全距离
-          safeDistance += Math.floor(absOverlap * 0.15);
-        } else if (overlapRatio > 0.3) {
-          // 重叠30%-70%，适中的安全距离
-          safeDistance += Math.floor(absOverlap * 0.1);
-        } else if (overlapRatio < 0.1) {
-          // 重叠小于10%，可能是微小的位置偏差，减少安全距离
-          safeDistance = Math.max(
-            MIN_BOUNDARY_SAFE_DISTANCE,
-            Math.floor(absOverlap * 0.5)
-          );
-        }
-
-        // 考虑组件尺寸，大组件需要更多空间
-        if (componentSize > 200) {
-          safeDistance += 2; // 大组件额外增加2px
-        } else if (componentSize < 50) {
-          safeDistance = Math.max(MIN_BOUNDARY_SAFE_DISTANCE, safeDistance - 1); // 小组件可以减少1px
-        }
-      }
-      break;
-  }
-
-  return Math.max(MIN_BOUNDARY_SAFE_DISTANCE, safeDistance);
-};
 
 // ==================== 辅助函数 ====================
 
@@ -597,33 +525,25 @@ export const reArrangeComponents = (
 const getElementPosition = (element) => {
   const parent = element.parentElement;
   const elementRect = element.getBoundingClientRect();
-  console.log(elementRect, "elementRect");
 
   const parentRect = parent.getBoundingClientRect();
-  console.log(parentRect, "parentRect");
 
   return elementRect;
 };
 
 // sandbox 模式下，在不同布局下拖拽组件导致宽度超出画布宽度时，需要调整画布宽度
 // 通过 excludeCompression 和 allowOverride 字段控制画布间的挤压和覆盖权限
-export const adjustCanvasWidth = (
-  canvasWidth: number,
-  triggerCanvasId: string
-) => {
+export const adjustCanvasWidth = (componentStyle: any, triggerCanvas: any) => {
   const editorDataStore = useEditorDataStore();
   const sandboxCanvas = editorDataStore.sandboxCanvas;
-  // 画布之间的间隔
-  const CANVAS_GAP = 10;
-  // 当前触发的画布
-  const triggerCanvas = sandboxCanvas[triggerCanvasId];
+
   // 查找当前画布右侧的画布(并且支持被当前画布挤压的画布)
-  const canvasAboutRight: any = [];
+  let canvasAboutRight: any = [];
 
   const obstacleCnanvas: any = [];
 
   const outherCanvas: any = Object.values(sandboxCanvas).filter(
-    (canvas) => canvas.id !== triggerCanvasId
+    (canvas) => canvas.id !== triggerCanvas.id
   );
 
   if (triggerCanvas.expansionDirection === "right") {
@@ -639,38 +559,50 @@ export const adjustCanvasWidth = (
       }
     });
 
-    console.log("障碍物：", obstacleCnanvas);
-    console.log("柯基鸭右侧画布：", canvasAboutRight);
-
     // 获取所有障碍物最左侧的 left
     const obstacleLeft = obstacleCnanvas.reduce((min, item) => {
       return Math.min(min, item.left);
     }, Infinity);
-    console.log("obstacleLeft", obstacleLeft);
 
-    if (canvasWidth > obstacleLeft) {
-      return false;
-    } else {
-      if (canvasWidth > triggerCanvas.minWidth) {
-        canvasAboutRight.forEach((item) => {
-          // if (canvasWidth > obstacleLeft) {
-          //   item.left =
-          // }
-          item.left = canvasWidth + 30;
-        });
+    if (componentStyle.width > triggerCanvas.minWidth) {
+      const itemc =
+        componentStyle.width - componentStyle.left - triggerCanvas.width;
+
+      console.log(itemc, "itemc");
+      canvasAboutRight = canvasAboutRight.sort((a, b) => {
+        return a.left - b.left;
+      });
+      // 倒着循环
+      for (let i = canvasAboutRight.length - 1; i >= 0; i--) {
+        const item = canvasAboutRight[i];
+        if (item.left + itemc + item.width >= obstacleLeft) {
+          componentStyle.width = triggerCanvas.width - componentStyle.left;
+          item.left = componentStyle.width + 20;
+          return false;
+        } else {
+          item.left = item.left + itemc;
+        }
       }
-
+      triggerCanvas.width = componentStyle.width - componentStyle.left;
       return true;
+    } else {
+      triggerCanvas.width = triggerCanvas.minWidth;
     }
   }
 
-  const canvasAboutLeft: any = [];
-  console.log(editorDataStore.editorMap[triggerCanvasId].offsetLeft);
-  const triggerCanvasPosition = getElementPosition(
-    editorDataStore.editorMap[triggerCanvasId]
-  );
-  console.log(triggerCanvasPosition);
   if (triggerCanvas.expansionDirection === "left") {
+    // 获取画布组件中的宽度最大值
+    const maxWidth = triggerCanvas.components.reduce((max, item) => {
+      return Math.max(max, item.style.width);
+    }, 0);
+
+    if (componentStyle.width < maxWidth) {
+      return true;
+    }
+    const canvasAboutLeft: any = [];
+    const triggerCanvasPosition = getElementPosition(
+      editorDataStore.editorMap[triggerCanvas.id]
+    );
     outherCanvas.forEach((item) => {
       if (
         triggerCanvas.squeezing.includes(item.id) &&
@@ -683,28 +615,28 @@ export const adjustCanvasWidth = (
       }
     });
 
-    console.log("障碍物：", obstacleCnanvas);
-    console.log("柯基鸭左侧画布：", canvasAboutLeft);
+    const obstacleLeft = obstacleCnanvas.sort((a, b) => {
+      return a.left - b.left;
+    });
 
-    // 获取所有障碍物
-    const obstacleRight = obstacleCnanvas.reduce((min, item) => {
-      const pos = getElementPosition(editorDataStore.editorMap[item.id]);
-      return Math.min(min, pos.right);
-    }, Infinity);
-    console.log("obstacleRight", obstacleRight);
-    if (canvasWidth > obstacleRight) {
-      return false;
-    } else {
-      if (canvasWidth > triggerCanvas.minWidth) {
-        canvasAboutRight.forEach((item) => {
-          // if (canvasWidth > obstacleLeft) {
-          //   item.left =
-          // }
-          // item.left = canvasWidth + 30;
-        });
+    const maxLeftCanvas =
+      obstacleLeft.length > 0 ? obstacleLeft[0] : { left: 0, width: 0 };
+    if (componentStyle.width > triggerCanvas.minWidth) {
+      const itemc = componentStyle.width - triggerCanvas.width;
+      if (
+        triggerCanvas.left - itemc <
+        maxLeftCanvas.left +
+          maxLeftCanvas.width +
+          editorDataStore.sandboxCanvasGap
+      ) {
+        return false;
       }
 
-      return true;
+      triggerCanvas.width = componentStyle.width;
+      componentStyle.left = 0;
+      triggerCanvas.left = triggerCanvas.left - itemc;
     }
+
+    return true;
   }
 };

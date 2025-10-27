@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-10-21 17:19:04
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-23 18:17:25
+ * @LastEditTime: 2025-10-27 15:37:24
  * @Description: 
 -->
 <template>
@@ -33,7 +33,9 @@
               :style="getDragTipsAreaStyle(item)"
               :canvasId="item.id"
               v-if="showDragTipsArea(item)"
-            ></div>
+            >
+              {{ item.id }}
+            </div>
             <EditorCanvasCore
               class="canvas-core editor-main"
               ref="canvasCoreRef"
@@ -72,7 +74,7 @@ const { componentData, canvasStyleData, editMode, editorMap, isSpaceDown } =
 const sandboxEditorState = reactive<EditorState>({
   canvasId: "sandbox-canvas-main",
 });
-const sandboxCanvasContainerRef = ref<HTMLElement | null>(null);
+const sandboxCanvasContainerRef = ref<any>(null);
 
 const handleComponentDrop = (e: any) => {
   e.preventDefault();
@@ -136,9 +138,17 @@ const handleComponentDragOver = (e: DragEvent): void => {
   }
 };
 const sandboxCanvasPreviewAreaItemRef = ref<HTMLElement | null>(null);
-
 const getSandboxCanvasPreviewAreaItemRefObj = ref({});
 const getPreviewAreaItemStyle = (style: any) => {
+  if (style.floatPosition == "left") {
+    style.left = editorDataStore.sandboxCanvasGap;
+  }
+  if (style.floatPosition == "right") {
+    style.left =
+      sandboxCanvasContainerRef.value?.offsetWidth -
+      style.width -
+      editorDataStore.sandboxCanvasGap;
+  }
   const height =
     style.height == "auto"
       ? `calc(100% - ${style.top * 2}px)`

@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-09-25 19:12:54
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-24 18:17:19
+ * @LastEditTime: 2025-10-27 16:45:20
  * @Description:
  */
 import { defineStore } from "pinia";
@@ -39,6 +39,7 @@ export const useEditorDataStore = defineStore("editorData", {
       },
       editorMap: {},
       isSpaceDown: false,
+      sandboxCanvasGap: 10,
       sandboxCanvas: {
         left: {
           id: "left",
@@ -52,9 +53,10 @@ export const useEditorDataStore = defineStore("editorData", {
           componentGap: 10,
           scale: 100,
           borderRadius: 10,
-          squeezing: ["leftTop"], // 可以挤压的画布
-          obstacle: ["bottom"], // 目标障碍物
+          squeezing: ["leftTop", "leftTop2", "leftTop3"], // 可以挤压的画布
+          obstacle: ["bottom", "right"], // 目标障碍物
           expansionDirection: "right",
+          floatPosition: "left",
         },
         leftTop: {
           id: "leftTop",
@@ -69,8 +71,9 @@ export const useEditorDataStore = defineStore("editorData", {
           scale: 100,
           borderRadius: 10,
           squeezing: ["left"], // 允许 left 画布挤压 leftTop
-          obstacle: ["bottom"],
+          obstacle: ["right"],
           expansionDirection: "right",
+          floatPosition: "leftTop",
         },
         right: {
           id: "right",
@@ -78,15 +81,16 @@ export const useEditorDataStore = defineStore("editorData", {
           minWidth: 400,
           height: "auto",
           top: 10,
-          right: 10,
+          left: 0,
           components: [],
           componentGap: 10,
           layout: "vertical",
           scale: 100,
           borderRadius: 10,
           squeezing: [], // 允许所有画布挤压
-          obstacle: ["bottom", "leftTop"],
+          obstacle: ["leftTop"],
           expansionDirection: "left",
+          floatPosition: "right",
         },
         // bottom: {
         //   id: "bottom",

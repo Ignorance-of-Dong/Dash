@@ -4,6 +4,7 @@
  * @Description: 简化版本的组件调整大小计算函数（不包含旋转逻辑）
  */
 
+import { ref } from "vue";
 import type { ResizePointPosition, CanvasComponentStyle } from "../types";
 import { adjustCanvasWidth } from "./correction";
 
@@ -257,38 +258,24 @@ function calculateRight(
   const height = style.height || 0;
 
   let resultWidth = Math.round(newWidth);
-  let resultLeft = Math.round(symmetricPoint.x);
+  let resultLeft = ref(Math.round(symmetricPoint.x));
   let resultTop = Math.round(center.y - height / 2);
 
-  if (mode == "sandbox" && canvasData.layout == "vertical") {
-    const isAdjust = adjustCanvasWidth(resultWidth + resultLeft, canvasData.id);
-    if (isAdjust) {
-      if (resultWidth + resultLeft - 10 < canvasData.minWidth) {
-        canvasData.width = canvasData.minWidth;
-      } else {
-        canvasData.width = resultWidth + resultLeft;
-      }
-    } else {
-      resultWidth = canvasData.width - resultLeft;
-    }
-  } else {
-    if (resultWidth > canvasClient.width - resultLeft) {
-      resultWidth = canvasClient.width - resultLeft;
-    }
+  if (mode == "dash" && resultWidth > canvasClient.width - resultLeft.value) {
+    resultWidth = canvasClient.width - resultLeft.value;
   }
-
-  console.log("resultWidth", resultWidth);
 
   if (resultWidth < 50) {
     resultWidth = 50;
-    resultLeft = style.left || 0;
+    resultLeft.value = style.left || 0;
   }
 
   if (resultWidth > 0) {
     style.width = resultWidth;
-    style.left = resultLeft;
+    style.left = resultLeft.value;
     style.top = resultTop;
   }
+  adjustCanvasWidth(style, canvasData);
 }
 
 /**
@@ -342,39 +329,31 @@ function calculateLeft(
   const height = style.height || 0;
 
   let resultWidth = Math.round(newWidth);
-  let resultLeft = Math.round(curPosition.x);
+  let resultLeft = ref(Math.round(curPosition.x));
   let resultTop = Math.round(center.y - height / 2);
-  const leftSpace = resultLeft < 0 ? 0 : resultLeft;
-  const rightSpace = canvasClient.width - resultLeft - resultWidth;
+  const leftSpace = resultLeft.value < 0 ? 0 : resultLeft.value;
+  const rightSpace = canvasClient.width - resultLeft.value - resultWidth;
+  console.log(Math.round(curPosition.x), "resultLeft.value");
 
-  if (mode == "sandbox" && canvasData.layout == "vertical") {
-    const isAdjust = adjustCanvasWidth(resultWidth + resultLeft, canvasData.id);
-    if (isAdjust) {
-      if (resultWidth < canvasData.minWidth) {
-        canvasData.width = canvasData.minWidth;
-      } else {
-        canvasData.width = resultWidth + resultLeft;
-      }
-    } else {
-      resultWidth = canvasData.width - resultLeft;
-    }
-  } else {
+  if (mode == "dash") {
     if (resultWidth > canvasClient.width - leftSpace - rightSpace) {
       resultWidth = canvasClient.width - leftSpace - rightSpace;
-      resultLeft = 0;
+      resultLeft.value = 0;
     }
   }
 
   if (resultWidth < 50) {
     resultWidth = 50;
-    resultLeft = style.left || 0;
+    resultLeft.value = style.left || 0;
   }
 
   if (resultWidth > 0) {
     style.width = resultWidth;
-    style.left = resultLeft;
+    style.left = resultLeft.value;
     style.top = resultTop;
   }
+
+  adjustCanvasWidth(style, canvasData);
 }
 
 type EditorMode = "sandbox" | "dash";
