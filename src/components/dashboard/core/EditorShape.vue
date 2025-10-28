@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-10-14 17:28:22
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-27 19:17:34
+ * @LastEditTime: 2025-10-28 18:11:25
 -->
 <template>
   <div
@@ -69,6 +69,14 @@ const isActive = () => {
  */
 const getPointStyle = (point: ResizePointPosition): ResizePointStyle => {
   let { width, height } = props.element.style;
+
+  // 如果是沙盒模式，需要应用缩放比例
+  if (editorDataStore.mode === "sandbox") {
+    const canvasScale = editorDataStore.sandboxCanvasStyle.scale || 1;
+    width = width * canvasScale;
+    height = height * canvasScale;
+  }
+
   width = width - 2;
   height = height - 2;
 
@@ -148,7 +156,13 @@ const handleMouseDownOnPoint = (
   // 复制样式对象，避免直接修改原对象
   const style = { ...props.defaultStyle };
 
-  // 组件中心点
+  // 获取缩放比例
+  const canvasStyleScale =
+    editorDataStore.mode === "sandbox"
+      ? editorDataStore.sandboxCanvasStyle.scale || 1
+      : 1;
+
+  // 组件中心点（基于真实坐标）
   const center = {
     x: style.left + style.width / 2,
     y: style.top + style.height / 2,
@@ -164,17 +178,19 @@ const handleMouseDownOnPoint = (
   // 获取调整点的位置信息
   const pointRect = e.target?.getBoundingClientRect();
 
-  // 当前点击圆点相对于画布的中心坐标
+  // 当前点击圆点相对于画布的坐标（需要反推为真实坐标）
   const curPoint = {
     x: Math.round(
-      pointRect.left - editorRectInfo.left + e.target.offsetWidth / 2
+      (pointRect.left - editorRectInfo.left + e.target.offsetWidth / 2) /
+        canvasStyleScale
     ),
     y: Math.round(
-      pointRect.top - editorRectInfo.top + e.target.offsetHeight / 2
+      (pointRect.top - editorRectInfo.top + e.target.offsetHeight / 2) /
+        canvasStyleScale
     ),
   };
 
-  // 获取对称点的坐标
+  // 获取对称点的坐标（基于真实坐标计算）
   const symmetricPoint = {
     x: center.x - (curPoint.x - center.x),
     y: center.y - (curPoint.y - center.y),
@@ -189,10 +205,19 @@ const handleMouseDownOnPoint = (
       return;
     }
 
-    // 计算当前鼠标位置相对于画布的坐标
+    // 获取缩放比例
+    const canvasStyleScale =
+      editorDataStore.mode === "sandbox"
+        ? editorDataStore.sandboxCanvasStyle.scale || 1
+        : 1;
+
+    // 计算当前鼠标位置相对于画布的坐标（需要反推为真实坐标）
     const curPosition = {
-      x: moveEvent.clientX - Math.round(editorRectInfo.left),
-      y: moveEvent.clientY - Math.round(editorRectInfo.top),
+      x:
+        (moveEvent.clientX - Math.round(editorRectInfo.left)) /
+        canvasStyleScale,
+      y:
+        (moveEvent.clientY - Math.round(editorRectInfo.top)) / canvasStyleScale,
     };
 
     // 使用简化版本的计算函数（不包含旋转和比例锁定逻辑）
@@ -200,8 +225,15 @@ const handleMouseDownOnPoint = (
     const clientRect = editorCanvas.getBoundingClientRect();
     const canvasData = editorDataStore.sandboxCanvas[props.canvasId];
 
+    // 反推真实画布尺寸用于计算
+    const realClientRect = {
+      ...clientRect,
+      width: clientRect.width / canvasStyleScale,
+      height: clientRect.height / canvasStyleScale,
+    };
+
     calculateSimpleComponentPositionAndSize(
-      clientRect,
+      realClientRect,
       point,
       style,
       curPosition,
@@ -229,8 +261,9 @@ const handleMouseDownOnPoint = (
             ? (componentLength - 1) * canvasData?.componentGap
             : 0;
 
+        // 使用真实画布高度（realClientRect 已经反推为真实尺寸）
         const totalOccupiedAraeHeight =
-          editorRectInfo.height -
+          realClientRect.height -
           totalComponentHeight -
           style.height -
           totalGapHeight;
@@ -240,7 +273,7 @@ const handleMouseDownOnPoint = (
       }
     }
 
-    // 更新组件样式（这里需要触发响应式更新）
+    // 更新组件样式（这里的 style 是真实坐标，未经过缩放）✅
     Object.assign(props.element.style, style);
   };
 
@@ -299,19 +332,32 @@ const handleInnerMouseDownOnShape = (e) => {
     }
     editorDataStore.setDragStatus("dragIn", props.canvasId);
     const clientRect = editorCanvas.getBoundingClientRect();
+
+    // 获取缩放比例
+    const canvasStyleScale =
+      editorDataStore.mode === "sandbox"
+        ? editorDataStore.sandboxCanvasStyle.scale || 1
+        : 1;
+
     hasMove = true;
     const curX = moveEvent.clientX;
     const curY = moveEvent.clientY;
-    let top = curY - startY + startTop;
-    let left = curX - startX + startLeft;
 
-    if (left < 0) left = 1;
-    if (top < 0) top = 1;
-    if (left > clientRect.width - pos.width) {
-      left = clientRect.width - pos.width - 1;
+    // 计算移动距离并反推为真实距离
+    let top = (curY - startY) / canvasStyleScale + startTop;
+    let left = (curX - startX) / canvasStyleScale + startLeft;
+
+    // 反推真实画布尺寸用于边界判断
+    const realWidth = clientRect.width / canvasStyleScale;
+    const realHeight = clientRect.height / canvasStyleScale;
+
+    if (left < 0) left = 0;
+    if (top < 0) top = 0;
+    if (left > realWidth - pos.width) {
+      left = realWidth - pos.width;
     }
-    if (top > clientRect.height - pos.height) {
-      top = clientRect.height - pos.height - 1;
+    if (top > realHeight - pos.height) {
+      top = realHeight - pos.height;
     }
     pos["top"] = top;
     pos["left"] = left;

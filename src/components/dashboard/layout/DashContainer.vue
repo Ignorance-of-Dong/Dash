@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-10-21 17:23:55
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-21 17:32:40
+ * @LastEditTime: 2025-10-28 15:34:56
  * @Description: 
 -->
 <template>
@@ -37,7 +37,7 @@ $header-height: 64px;
 }
 
 .editor-container {
-  height: calc(100vh - #{$header-height});
+  width: 100%;
   flex: 1;
 
   &.preview-container {

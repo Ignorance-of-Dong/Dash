@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-09-29 14:57:20
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-21 18:50:40
+ * @LastEditTime: 2025-10-28 10:49:28
  * @Description: 
 -->
 <template>
@@ -18,6 +18,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import { onMounted } from "vue";
 import { useEditorDataStore } from "./store/editorData";
 
 const editorDataStore = useEditorDataStore();

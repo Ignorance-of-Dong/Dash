@@ -4,7 +4,7 @@ import { useEditorDataStore } from "../store/editorData";
  * @Author: zhangzheng
  * @Date: 2025-10-22 17:22:01
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-27 19:17:16
+ * @LastEditTime: 2025-10-28 18:20:53
  * @Description: 组件位置校正和重叠检测工具函数
  */
 
@@ -537,6 +537,9 @@ export const adjustCanvasWidth = (componentStyle: any, triggerCanvas: any) => {
   const editorDataStore = useEditorDataStore();
   const sandboxCanvas = editorDataStore.sandboxCanvas;
 
+  // 获取缩放比例
+  const canvasStyleScale = editorDataStore.sandboxCanvasStyle?.scale || 1;
+
   // 查找当前画布右侧的画布(并且支持被当前画布挤压的画布)
   let canvasAboutRight: any = [];
 
@@ -566,57 +569,112 @@ export const adjustCanvasWidth = (componentStyle: any, triggerCanvas: any) => {
 
     // 计算画布中所有组件的最大占位宽度（left + width）
     // 注意：components数组可能还未更新，所以需要同时考虑当前正在调整的组件
-    const componentsMaxRightEdge = triggerCanvas.components.reduce((max, comp) => {
-      const rightEdge = (comp.style.left || 0) + (comp.style.width || 0);
-      return Math.max(max, rightEdge);
-    }, 0);
-    
+    const componentsMaxRightEdge = triggerCanvas.components.reduce(
+      (max, comp) => {
+        const rightEdge = (comp.style.left || 0) + (comp.style.width || 0);
+        return Math.max(max, rightEdge);
+      },
+      0
+    );
+
     // 当前正在调整的组件的右边界
-    const currentComponentRightEdge = (componentStyle.left || 0) + (componentStyle.width || 0);
-    
+    const currentComponentRightEdge =
+      (componentStyle.left || 0) + (componentStyle.width || 0);
+
     // 取两者的最大值，确保考虑了最新状态
-    const maxComponentRightEdge = Math.max(componentsMaxRightEdge, currentComponentRightEdge);
+    const maxComponentRightEdge = Math.max(
+      componentsMaxRightEdge,
+      currentComponentRightEdge
+    );
 
     // 计算画布理论上应该有的宽度（基于组件占位）
-    let targetCanvasWidth = Math.round(Math.max(maxComponentRightEdge, triggerCanvas.minWidth));
-    
+    let targetCanvasWidth = Math.round(
+      Math.max(maxComponentRightEdge, triggerCanvas.minWidth)
+    );
+
     // 检查是否会与右侧的 squeezing 画布重叠，如果会则限制画布宽度
     if (canvasAboutRight.length > 0) {
       // 找到最左侧的 squeezing 画布
-      const leftmostSqueezingCanvas = canvasAboutRight.reduce((leftmost, canvas) => {
-        return canvas.left < leftmost.left ? canvas : leftmost;
-      }, canvasAboutRight[0]);
-      
+      const leftmostSqueezingCanvas = canvasAboutRight.reduce(
+        (leftmost, canvas) => {
+          return canvas.left < leftmost.left ? canvas : leftmost;
+        },
+        canvasAboutRight[0]
+      );
+
       // 计算画布的最大允许宽度（不会覆盖到 squeezing 画布的位置）
-      const maxAllowedWidth = Math.round(leftmostSqueezingCanvas.left - triggerCanvas.left - (editorDataStore.sandboxCanvasGap || 20));
-      
+      const maxAllowedWidth = Math.round(
+        leftmostSqueezingCanvas.left - triggerCanvas.left
+      );
+
       // 如果计算出的宽度会导致覆盖，则限制为最大允许宽度
       if (targetCanvasWidth > maxAllowedWidth && maxAllowedWidth > 0) {
-        targetCanvasWidth = Math.round(Math.max(maxAllowedWidth, triggerCanvas.minWidth));
+        targetCanvasWidth = Math.round(
+          Math.max(maxAllowedWidth, triggerCanvas.minWidth)
+        );
       }
     }
 
     // 计算组件的右边界（取整确保精确）
-    const componentRightEdge = Math.round(componentStyle.left + componentStyle.width);
-    
+    const componentRightEdge = Math.round(
+      componentStyle.left + componentStyle.width
+    );
+
     // 判断组件是否超出当前画布宽度（使用当前宽度而不是minWidth）
     if (componentRightEdge > triggerCanvas.width) {
       // 组件扩大：需要扩展画布
       const itemc = componentRightEdge - triggerCanvas.width;
 
       console.log(itemc, "扩大距离");
+
+      // ✅ 先检查 triggerCanvas 自己扩展后是否会碰到障碍物
+      if (obstacleCnanvas.length > 0) {
+        const newCanvasRightEdge = Math.round(
+          triggerCanvas.left + triggerCanvas.width + itemc
+        );
+
+        if (newCanvasRightEdge > obstacleLeft) {
+          // triggerCanvas 自己扩展后会碰到障碍物，计算允许的最大宽度
+          console.log("triggerCanvas 扩展后会碰到障碍物，限制组件宽度");
+          const maxAllowedExpansion = Math.round(
+            obstacleLeft - triggerCanvas.left - triggerCanvas.width
+          );
+
+          if (maxAllowedExpansion > 0) {
+            componentStyle.width = Math.round(
+              componentStyle.left + triggerCanvas.width + maxAllowedExpansion
+            );
+          } else {
+            // 无法扩展，保持原宽度
+            componentStyle.width = Math.round(
+              triggerCanvas.width - componentStyle.left
+            );
+          }
+          return false;
+        }
+      }
+
       canvasAboutRight = canvasAboutRight.sort((a, b) => {
         return a.left - b.left;
       });
+
       // 倒着循环，向右推挤压的画布
       for (let i = canvasAboutRight.length - 1; i >= 0; i--) {
         const item = canvasAboutRight[i];
-        if (item.left + itemc + item.width >= obstacleLeft) {
-          // 碰到障碍物，限制组件宽度（取整）
-          componentStyle.width = Math.round(triggerCanvas.width - componentStyle.left);
-          // 将 squeezing 画布放置在画布右边界后面（画布右边界 = triggerCanvas.left + triggerCanvas.width）
-          const canvasRightEdge = Math.round(triggerCanvas.left + triggerCanvas.width);
-          item.left = Math.round(canvasRightEdge + (editorDataStore.sandboxCanvasGap || 20));
+        const newItemRightEdge = Math.round(item.left + itemc + item.width);
+
+        // 检查 squeezing 画布被推后是否会碰到障碍物
+        if (obstacleCnanvas.length > 0 && newItemRightEdge > obstacleLeft) {
+          // squeezing 画布被推后会碰到障碍物，限制组件宽度
+          console.log("squeezing 画布被推后会碰到障碍物，限制组件宽度");
+          componentStyle.width = Math.round(
+            triggerCanvas.width - componentStyle.left
+          );
+          // 将 squeezing 画布放置在画布右边界后面
+          const canvasRightEdge = Math.round(
+            triggerCanvas.left + triggerCanvas.width
+          );
+          item.left = Math.round(canvasRightEdge);
           return false;
         } else {
           item.left = Math.round(item.left + itemc);
@@ -628,24 +686,24 @@ export const adjustCanvasWidth = (componentStyle: any, triggerCanvas: any) => {
     } else {
       // 组件缩小或未超出：根据所有组件的最大占位宽度调整画布
       const widthChange = triggerCanvas.width - targetCanvasWidth;
-      
+
       if (widthChange > 0) {
         // 画布宽度缩小了，需要将右侧被挤压的画布向左拉回
         console.log(widthChange, "缩小距离");
-        
+
         canvasAboutRight = canvasAboutRight.sort((a, b) => {
           return a.left - b.left;
         });
-        
+
         // 正序循环，向左拉回被挤压的画布
         for (let i = 0; i < canvasAboutRight.length; i++) {
           const item = canvasAboutRight[i];
           // 计算画布应该在的新位置（向左移动，取整）
           const newLeft = Math.round(item.left - widthChange);
-          
-          // 确保不会移动到当前画布内部（至少保持一个gap的距离，取整）
-          const minLeft = Math.round(triggerCanvas.left + targetCanvasWidth + (editorDataStore.sandboxCanvasGap || 20));
-          
+
+          // 确保不会移动到当前画布内部
+          const minLeft = Math.round(triggerCanvas.left + targetCanvasWidth);
+
           if (newLeft >= minLeft) {
             // 可以安全地向左移动
             item.left = newLeft;
@@ -655,7 +713,7 @@ export const adjustCanvasWidth = (componentStyle: any, triggerCanvas: any) => {
           }
         }
       }
-      
+
       // 更新画布宽度（取整）
       triggerCanvas.width = Math.round(targetCanvasWidth);
       return true;
@@ -668,24 +726,32 @@ export const adjustCanvasWidth = (componentStyle: any, triggerCanvas: any) => {
     const componentsMaxWidth = triggerCanvas.components.reduce((max, item) => {
       return Math.max(max, item.style.width || 0);
     }, 0);
-    
+
     // 当前正在调整的组件的宽度
     const currentComponentWidth = componentStyle.width || 0;
-    
+
     // 取两者的最大值，确保考虑了最新状态
-    const maxComponentWidth = Math.max(componentsMaxWidth, currentComponentWidth);
+    const maxComponentWidth = Math.max(
+      componentsMaxWidth,
+      currentComponentWidth
+    );
 
     // 计算画布理论上应该有的宽度（基于组件占位，取整）
-    let targetCanvasWidth = Math.round(Math.max(maxComponentWidth, triggerCanvas.minWidth));
+    let targetCanvasWidth = Math.round(
+      Math.max(maxComponentWidth, triggerCanvas.minWidth)
+    );
 
     const canvasAboutLeft: any = [];
     const triggerCanvasPosition = getElementPosition(
       editorDataStore.editorMap[triggerCanvas.id]
     );
+    // 将 DOM 位置（缩放后）反推为真实位置
+    const triggerCanvasRealLeft = triggerCanvasPosition.left / canvasStyleScale;
+
     outherCanvas.forEach((item) => {
       if (
         triggerCanvas.squeezing.includes(item.id) &&
-        (item?.left || 0) < triggerCanvasPosition.left
+        (item?.left || 0) < triggerCanvasRealLeft
       ) {
         canvasAboutLeft.push(item);
       }
@@ -700,54 +766,67 @@ export const adjustCanvasWidth = (componentStyle: any, triggerCanvas: any) => {
 
     const maxLeftCanvas =
       obstacleLeft.length > 0 ? obstacleLeft[0] : { left: 0, width: 0 };
-    
+
     // 检查targetCanvasWidth是否会导致画布左边界覆盖到左侧的 squeezing 画布
     if (canvasAboutLeft.length > 0) {
       // 找到最右侧的 squeezing 画布（最接近当前画布的）
-      const rightmostSqueezingCanvas = canvasAboutLeft.reduce((rightmost, canvas) => {
-        const canvasRight = canvas.left + canvas.width;
-        const rightmostRight = rightmost.left + rightmost.width;
-        return canvasRight > rightmostRight ? canvas : rightmost;
-      }, canvasAboutLeft[0]);
-      
+      const rightmostSqueezingCanvas = canvasAboutLeft.reduce(
+        (rightmost, canvas) => {
+          const canvasRight = canvas.left + canvas.width;
+          const rightmostRight = rightmost.left + rightmost.width;
+          return canvasRight > rightmostRight ? canvas : rightmost;
+        },
+        canvasAboutLeft[0]
+      );
+
       // 计算如果使用 targetCanvasWidth，画布的新左边界（取整）
       // 左侧扩展时，画布右边界相对固定，左边界 = 右边界 - width
-      const currentRightEdge = Math.round(triggerCanvas.left + triggerCanvas.width);
+      const currentRightEdge = Math.round(
+        triggerCanvas.left + triggerCanvas.width
+      );
       const newLeftEdge = Math.round(currentRightEdge - targetCanvasWidth);
-      
+
       // 计算左侧 squeezing 画布的右边界（取整）
-      const squeezingRightEdge = Math.round(rightmostSqueezingCanvas.left + rightmostSqueezingCanvas.width);
-      
-      // 确保画布左边界不会覆盖到 squeezing 画布（保持gap距离，取整）
-      const minAllowedLeft = Math.round(squeezingRightEdge + (editorDataStore.sandboxCanvasGap || 20));
-      
+      const squeezingRightEdge = Math.round(
+        rightmostSqueezingCanvas.left + rightmostSqueezingCanvas.width
+      );
+
+      // 确保画布左边界不会覆盖到 squeezing 画布
+      const minAllowedLeft = Math.round(squeezingRightEdge);
+
       // 如果计算出的左边界会导致覆盖，则限制 targetCanvasWidth
       if (newLeftEdge < minAllowedLeft) {
         // 重新计算允许的最大宽度（取整）
         const maxAllowedWidth = Math.round(currentRightEdge - minAllowedLeft);
         if (maxAllowedWidth > 0) {
-          targetCanvasWidth = Math.round(Math.min(targetCanvasWidth, maxAllowedWidth));
+          targetCanvasWidth = Math.round(
+            Math.min(targetCanvasWidth, maxAllowedWidth)
+          );
           // 同时确保不低于最小宽度
-          targetCanvasWidth = Math.round(Math.max(targetCanvasWidth, triggerCanvas.minWidth));
+          targetCanvasWidth = Math.round(
+            Math.max(targetCanvasWidth, triggerCanvas.minWidth)
+          );
         }
       }
     }
-    
+
     // 判断组件宽度是否超出当前画布宽度（使用当前宽度而不是minWidth）
     if (componentStyle.width > triggerCanvas.width) {
       // 组件扩大：需要向左扩展画布
       const itemc = componentStyle.width - triggerCanvas.width;
       if (
         triggerCanvas.left - itemc <
-        maxLeftCanvas.left +
-          maxLeftCanvas.width +
-          editorDataStore.sandboxCanvasGap
+        maxLeftCanvas.left + maxLeftCanvas.width
       ) {
         // 碰到障碍物，限制组件宽度（取整）
         // 计算允许的最大宽度
-        const maxAllowedExpansion = Math.round(triggerCanvas.left - maxLeftCanvas.left - maxLeftCanvas.width - editorDataStore.sandboxCanvasGap);
+        const maxAllowedExpansion = Math.round(
+          triggerCanvas.left - maxLeftCanvas.left - maxLeftCanvas.width
+        );
         if (maxAllowedExpansion > 0) {
-          componentStyle.width = Math.round(triggerCanvas.width + maxAllowedExpansion);
+          componentStyle.width = Math.round(
+            triggerCanvas.width + maxAllowedExpansion
+          );
         } else {
           componentStyle.width = Math.round(triggerCanvas.width);
         }
@@ -757,21 +836,20 @@ export const adjustCanvasWidth = (componentStyle: any, triggerCanvas: any) => {
 
       // 向左扩展画布，可能需要推挤左侧的画布
       canvasAboutLeft.sort((a, b) => b.left - a.left); // 从右到左排序
-      
+
       // 推挤左侧的画布向左移动
       for (let i = 0; i < canvasAboutLeft.length; i++) {
         const item = canvasAboutLeft[i];
         // 检查是否会与障碍物冲突（取整）
         const newLeft = Math.round(item.left - itemc);
-        if (newLeft >= maxLeftCanvas.left + maxLeftCanvas.width + editorDataStore.sandboxCanvasGap) {
+        if (newLeft >= maxLeftCanvas.left + maxLeftCanvas.width) {
           item.left = newLeft;
         } else {
           // 如果会冲突，停止扩展，限制组件宽度（取整）
           componentStyle.width = Math.round(triggerCanvas.width);
           componentStyle.left = 0;
           // 将 squeezing 画布放置在画布左边界前面（取整）
-          // 画布左边界会在当前位置，squeezing 画布应该在左边界 - gap - squeezing画布宽度
-          item.left = Math.round(triggerCanvas.left - (editorDataStore.sandboxCanvasGap || 20) - item.width);
+          item.left = Math.round(triggerCanvas.left - item.width);
           return false;
         }
       }
@@ -786,22 +864,24 @@ export const adjustCanvasWidth = (componentStyle: any, triggerCanvas: any) => {
       if (widthChange > 0) {
         // 画布宽度需要缩小（画布向右收缩）
         console.log(widthChange, "左侧画布缩小距离");
-        
+
         // 计算画布缩小后的新left位置（取整）
-        const newTriggerCanvasLeft = Math.round(triggerCanvas.left + widthChange);
-        
+        const newTriggerCanvasLeft = Math.round(
+          triggerCanvas.left + widthChange
+        );
+
         // 将左侧被挤压的画布向右拉回
         canvasAboutLeft.sort((a, b) => b.left - a.left); // 从右到左排序
-        
+
         for (let i = 0; i < canvasAboutLeft.length; i++) {
           const item = canvasAboutLeft[i];
           // 计算画布应该在的新位置（向右移动，取整）
           const newLeft = Math.round(item.left + widthChange);
-          
-          // 确保不会移动到当前画布内部（至少保持一个gap的距离，取整）
+
+          // 确保不会移动到当前画布内部
           // 使用更新后的triggerCanvas.left来计算边界
-          const maxAllowedLeft = Math.round(newTriggerCanvasLeft - (editorDataStore.sandboxCanvasGap || 20) - item.width);
-          
+          const maxAllowedLeft = Math.round(newTriggerCanvasLeft - item.width);
+
           if (newLeft <= maxAllowedLeft) {
             // 可以安全地向右移动
             item.left = newLeft;
@@ -810,7 +890,7 @@ export const adjustCanvasWidth = (componentStyle: any, triggerCanvas: any) => {
             item.left = maxAllowedLeft;
           }
         }
-        
+
         triggerCanvas.width = Math.round(targetCanvasWidth);
         triggerCanvas.left = newTriggerCanvasLeft;
       } else if (widthChange < 0) {

@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-09-25 19:12:54
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-27 16:45:20
+ * @LastEditTime: 2025-10-28 16:27:35
  * @Description:
  */
 import { defineStore } from "pinia";
@@ -16,6 +16,7 @@ export const useEditorDataStore = defineStore("editorData", {
         ...clone(DEFAULT_CANVAS_STYLE_DATA_DARK),
         backgroundColor: null,
       },
+
       editMode: "edit", // 编辑器模式 edit preview
       componentData: [] as any, // 画布组件数据
       curComponent: null as any,
@@ -24,37 +25,30 @@ export const useEditorDataStore = defineStore("editorData", {
       dragStatus: "idle", // idle dragIn dragOut
       dragCanvasId: "",
       curComponentIndex: null,
-      dataPrepareState: false, //数据准备状态
-      dvInfo: {
-        dataState: null,
-        optType: null,
-        id: null,
-        name: null,
-        pid: null,
-        status: null,
-        selfWatermarkStatus: null,
-        watermarkInfo: {},
-        type: null,
-        mobileLayout: false,
-      },
       editorMap: {},
       isSpaceDown: false,
+      sandboxCanvasStyle: {
+        width: 1920,
+        height: 1080,
+        scale: 1,
+      },
       sandboxCanvasGap: 10,
       sandboxCanvas: {
         left: {
           id: "left",
           width: 400,
           minWidth: 400,
-          height: "auto",
-          top: 10,
-          left: 10,
+          height: 0,
+          heightType: "auto",
+          top: 0,
+          left: 0,
           layout: "vertical",
-          components: [],
+          components: [] as any,
           componentGap: 10,
           scale: 100,
           borderRadius: 10,
-          squeezing: ["leftTop"], // 可以挤压的画布
-          obstacle: ["bottom", "right"], // 目标障碍物
+          squeezing: ["leftTop"], // 将要挤压的画布
+          obstacle: ["bottom", "right"], // 障碍物
           expansionDirection: "right",
           floatPosition: "left",
         },
@@ -63,9 +57,10 @@ export const useEditorDataStore = defineStore("editorData", {
           width: 400,
           minWidth: 400,
           height: 100,
-          top: 10,
-          left: 420,
-          components: [],
+          top: 0,
+          left: 400,
+          components: [] as any,
+          isPositionLeftScale: true,
           layout: "horizontal",
           componentGap: 10,
           scale: 100,
@@ -79,10 +74,11 @@ export const useEditorDataStore = defineStore("editorData", {
           id: "right",
           width: 400,
           minWidth: 400,
-          height: "auto",
-          top: 10,
+          height: 0,
+          heightType: "auto",
+          top: 0,
           left: 0,
-          components: [],
+          components: [] as any,
           componentGap: 10,
           layout: "vertical",
           scale: 100,
@@ -131,21 +127,14 @@ export const useEditorDataStore = defineStore("editorData", {
     setCanvasStyleScale(value) {
       this.canvasStyleData.scale = value;
     },
+    setContainerScale(value) {
+      this.sandboxCanvasStyle.scale = value;
+    },
     setComponentData(componentData = []) {
       this.componentData = componentData;
     },
     setCurTabName(val) {
       this.curTabName = val;
-    },
-    setHiddenListStatus(status?) {
-      if (status != undefined) {
-        this.hiddenListStatus = !!status;
-      } else {
-        this.hiddenListStatus = !this.hiddenListStatus;
-      }
-      if (this.dvInfo.type === "dashboard") {
-        this.setBatchOptStatus(false);
-      }
     },
     setCurComponent({ component, index }) {
       console.log("[ setCurComponent ] >", component, index);

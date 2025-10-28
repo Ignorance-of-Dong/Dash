@@ -2,18 +2,21 @@
  * @Author: zhangzheng
  * @Date: 2025-10-21 17:19:04
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-27 15:37:24
+ * @LastEditTime: 2025-10-28 17:26:33
  * @Description: 
 -->
 <template>
   <DashContainer>
     <template #header>
-      <DashEditorHeader />
+      <DashEditorHeader @preview="togglePreviewMode" />
     </template>
 
     <template #content>
       <div class="sandbox-canvas-container" ref="sandboxCanvasContainerRef">
-        <div class="sandbox-canvas-preview-area">
+        <div
+          class="sandbox-canvas-preview-area"
+          :key="editorDataStore.sandboxCanvasStyle.scale"
+        >
           <div
             class="sandbox-canvas-preview-area-item"
             v-for="item in editorDataStore.sandboxCanvas"
@@ -48,9 +51,10 @@
       </div>
     </template>
   </DashContainer>
+  <SandboxPreviewPanel v-if="isPreviewMode" />
 </template>
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { onMounted, onUnmounted, reactive, ref, nextTick } from "vue";
 import DashContainer from "./layout/DashContainer.vue";
 import DashEditorHeader from "./DashEditorHeader.vue";
 import { EditorState } from "./types";
@@ -61,6 +65,7 @@ import { changeComponentSizeWithScale } from "./utils/changeComponentsSizeWithSc
 import { v4 as uuidv4 } from "uuid";
 import { componentList } from "./cursorComponent/config";
 import { clone } from "ramda";
+import SandboxPreviewPanel from "./preview/SandboxPreviewPanel.vue";
 import {
   correctionComponentPosition,
   getRemainingArae,
@@ -106,13 +111,24 @@ const handleComponentDrop = (e: any) => {
     console.error("未找到对应的组件配置");
     return;
   }
-  // 设置组件位置和属性
-  component.style.top = e.clientY - rectInfo.y;
-  component.style.left = e.clientX - rectInfo.x;
+
+  // 获取缩放比例，反推真实位置和尺寸
+  const canvasStyleScale = editorDataStore.sandboxCanvasStyle.scale || 1;
+
+  // 设置组件位置和属性（通过缩放比例反推真实位置）
+  component.style.top = (e.clientY - rectInfo.y) / canvasStyleScale;
+  component.style.left = (e.clientX - rectInfo.x) / canvasStyleScale;
+
+  // 反推真实画布尺寸用于边界判断
+  const realRectInfo = {
+    ...rectInfo,
+    width: rectInfo.width / canvasStyleScale,
+    height: rectInfo.height / canvasStyleScale,
+  };
 
   const isPass = correctionComponentPosition(
     component,
-    rectInfo,
+    realRectInfo,
     editorDataStore.sandboxCanvas[canvasId.replace("editor-", "")]
   );
   if (!isPass) {
@@ -139,39 +155,95 @@ const handleComponentDragOver = (e: DragEvent): void => {
 };
 const sandboxCanvasPreviewAreaItemRef = ref<HTMLElement | null>(null);
 const getSandboxCanvasPreviewAreaItemRefObj = ref({});
+
+// 计算全局容器缩放比例（基于 sandboxCanvasStyle 的高度）
+const calculateContainerScale = () => {
+  if (!sandboxCanvasContainerRef.value) return;
+
+  const currentHeight = sandboxCanvasContainerRef.value.offsetHeight;
+
+  // 使用 sandboxCanvasStyle 中的高度作为标准
+  const standardHeight = editorDataStore.sandboxCanvasStyle.height;
+
+  // 计算缩放比例：以 sandboxCanvasStyle 高度为基准
+  if (standardHeight > 0) {
+    if (currentHeight === standardHeight) {
+      // 如果高度相等，保持缩放不变
+      editorDataStore.setContainerScale(1);
+    } else {
+      // 否则计算新的缩放比例
+      editorDataStore.setContainerScale(currentHeight / standardHeight);
+    }
+
+    console.log(
+      `容器缩放比例更新: ${editorDataStore.scale} (${currentHeight}/${standardHeight})`
+    );
+  }
+};
+
 const getPreviewAreaItemStyle = (style: any) => {
+  // 获取容器尺寸
+  const containerWidth = sandboxCanvasContainerRef.value?.offsetWidth || 0;
+  const containerHeight = sandboxCanvasContainerRef.value?.offsetHeight || 0;
+
+  // 获取 sandboxCanvasStyle 中的缩放比例
+  const canvasStyleScale = editorDataStore.sandboxCanvasStyle.scale || 1;
+
+  // 计算真实逻辑坐标（用于存储和碰撞检测）
+  let realLogicLeft = style.left; // 默认使用原始值（真实坐标）
+
+  // 计算浏览器定位坐标（用于 DOM 渲染，缩放后的坐标）
+  let browserPositionLeft = style.left; // 默认使用原始值
+
   if (style.floatPosition == "left") {
-    style.left = editorDataStore.sandboxCanvasGap;
+    browserPositionLeft = 0;
+    realLogicLeft = 0; // 真实逻辑坐标也是 0
+  } else if (style.floatPosition == "right") {
+    // 浏览器定位：容器宽度 - 缩放后的画布宽度
+    browserPositionLeft = containerWidth - style.width * canvasStyleScale;
+    // 真实逻辑坐标：反推为真实坐标（用于碰撞检测）
+    realLogicLeft = browserPositionLeft / canvasStyleScale;
+  } else if (style.isPositionLeftScale) {
+    // isPositionLeftScale 表示 left 需要缩放显示
+    // 浏览器定位：原始值 * 缩放比例
+    browserPositionLeft = style.left * canvasStyleScale;
+    // 真实逻辑坐标：保持原始值（不缩放）
+    realLogicLeft = style.left;
+  } else {
+    // 普通情况：浏览器定位和逻辑坐标都使用原始值
+    browserPositionLeft = style.left;
+    realLogicLeft = style.left;
   }
-  if (style.floatPosition == "right") {
-    style.left =
-      sandboxCanvasContainerRef.value?.offsetWidth -
-      style.width -
-      editorDataStore.sandboxCanvasGap;
+
+  // 根据 heightType 来计算高度，返回具体数值
+  let heightValue: number;
+  if (style.heightType === "auto") {
+    // "auto" 表示和父级保持一样的高度
+    heightValue = containerHeight;
+  } else {
+    heightValue = style.height;
   }
-  const height =
-    style.height == "auto"
-      ? `calc(100% - ${style.top * 2}px)`
-      : `${style.height}px`;
+
+  // 只对宽度和高度应用缩放（定位信息已适配浏览器，无需缩放）
+  const scaledHeight =
+    style.heightType != "auto" ? heightValue * canvasStyleScale : style.height;
+  const scaledWidth = style.width * canvasStyleScale;
 
   let resultStyle: any = {
-    width: "",
-    height: height,
+    width: `${scaledWidth}px`,
+    height: `${scaledHeight}px`,
   };
-  if (style.width == "auto") {
-    resultStyle.width = "100%";
-  } else if (style.width == "calc") {
-    resultStyle.width = `calc(100% - 600px)`;
-  } else {
-    resultStyle.width = `${style.width}px`;
-  }
 
+  // 定位信息
   if (style.top || style.top == 0) resultStyle.top = `${style.top}px`;
   if (style.aligin == "center") {
     resultStyle.left = `50%`;
     resultStyle.transform = `translateX(-50%)`;
   } else {
-    if (style.left || style.left == 0) resultStyle.left = `${style.left}px`;
+    // 使用计算好的浏览器定位坐标（已经处理了 floatPosition 和 isPositionLeftScale）
+    if (browserPositionLeft !== undefined) {
+      resultStyle.left = `${browserPositionLeft}px`;
+    }
   }
   if (style.right || style.right == 0) resultStyle.right = `${style.right}px`;
   if (style.bottom || style.bottom == 0)
@@ -180,7 +252,34 @@ const getPreviewAreaItemStyle = (style: any) => {
   if (style.borderRadius) {
     resultStyle.borderRadius = `${style.borderRadius}px`;
   }
+
+  // 同步画布数据到 sandboxCanvas，确保都是数字格式
+  if (editorDataStore.sandboxCanvas[style.id]) {
+    const canvas = editorDataStore.sandboxCanvas[style.id];
+
+    // 更新数字格式的尺寸和位置数据
+    if (typeof style.width === "number") {
+      canvas.width = style.width;
+    }
+
+    canvas.height = heightValue; // height 总是具体数值
+
+    if (typeof style.top === "number") {
+      canvas.top = style.top;
+    }
+
+    // ✅ 关键修复：存储真实逻辑坐标，而不是浏览器定位坐标
+    if (typeof realLogicLeft === "number") {
+      canvas.left = realLogicLeft;
+    }
+  }
+
   return resultStyle;
+};
+
+// 获取全局容器缩放比例，供组件使用
+const getContainerScale = (): number => {
+  return editorDataStore.scale;
 };
 
 const getDragTipsAreaStyle = (style: any) => {
@@ -203,6 +302,47 @@ const showDragTipsArea = (item: any) => {
     return editorDataStore.dragStatus == "dragIn";
   }
 };
+
+const isPreviewMode = ref(false);
+const togglePreviewMode = () => {
+  isPreviewMode.value = !isPreviewMode.value;
+};
+// 窗口大小变化处理函数
+const handleWindowResize = () => {
+  // 使用 nextTick 确保 DOM 更新完成后再计算
+  nextTick(() => {
+    calculateContainerScale();
+  });
+};
+
+onMounted(() => {
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      isPreviewMode.value = false;
+    }
+  });
+
+  // 初始化容器缩放比例
+  nextTick(() => {
+    calculateContainerScale();
+  });
+
+  // 监听浏览器窗口大小变化
+  window.addEventListener("resize", handleWindowResize);
+  console.log("开始监听浏览器窗口大小变化");
+});
+
+onUnmounted(() => {
+  // 清理窗口大小变化监听器
+  window.removeEventListener("resize", handleWindowResize);
+  console.log("停止监听浏览器窗口大小变化");
+});
+
+// 暴露方法供其他组件使用
+defineExpose({
+  getContainerScale, // 暴露全局容器缩放比例
+  calculateContainerScale, // 暴露重新计算方法
+});
 </script>
 <style lang="scss" scoped>
 .sandbox-canvas-container {
@@ -234,6 +374,7 @@ const showDragTipsArea = (item: any) => {
   .sandbox-canvas-preview-area-item {
     position: absolute;
     border-radius: 10px;
+    background-color: #edb98b;
   }
 }
 </style>
