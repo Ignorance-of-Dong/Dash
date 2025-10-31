@@ -7,6 +7,7 @@
 import { ref } from "vue";
 import type { ResizePointPosition, CanvasComponentStyle } from "../types";
 import { adjustCanvasWidth } from "./correction";
+import { clone } from "ramda";
 
 /** 点坐标接口 */
 interface Point {
@@ -324,6 +325,8 @@ function calculateLeft(
 ) {
   const { symmetricPoint, center } = pointInfo;
 
+  const originStyle = clone(style);
+
   // 计算新宽度
   const newWidth = symmetricPoint.x - curPosition.x;
   const height = style.height || 0;
@@ -333,27 +336,38 @@ function calculateLeft(
   let resultTop = Math.round(center.y - height / 2);
   const leftSpace = resultLeft.value < 0 ? 0 : resultLeft.value;
   const rightSpace = canvasClient.width - resultLeft.value - resultWidth;
-  console.log(Math.round(curPosition.x), "resultLeft.value");
 
-  if (mode == "dash") {
-    if (resultWidth > canvasClient.width - leftSpace - rightSpace) {
-      resultWidth = canvasClient.width - leftSpace - rightSpace;
-      resultLeft.value = 0;
-    }
-  }
+  const newStyle = {
+    width: resultWidth,
+    left: resultLeft.value,
+    top: resultTop,
+  };
+  const isPass = adjustCanvasWidth(newStyle, canvasData, {
+    originStyle,
+    newWidth: symmetricPoint.x - curPosition.x,
+    newLeft: Math.round(curPosition.x),
+  });
+  // if (mode == "dash") {
+
+  // }
+
+  // if (resultWidth > canvasClient.width - leftSpace - rightSpace) {
+  //   resultWidth = canvasClient.width - leftSpace - rightSpace;
+  //   resultLeft.value = 0;
+  // }
 
   if (resultWidth < 50) {
     resultWidth = 50;
-    resultLeft.value = style.left || 0;
+    newStyle.left = style.left || 0;
   }
 
   if (resultWidth > 0) {
-    style.width = resultWidth;
-    style.left = resultLeft.value;
-    style.top = resultTop;
+    if (isPass) {
+      style.width = resultWidth;
+      style.left = newStyle.left;
+      style.top = resultTop;
+    }
   }
-
-  adjustCanvasWidth(style, canvasData);
 }
 
 type EditorMode = "sandbox" | "dash";

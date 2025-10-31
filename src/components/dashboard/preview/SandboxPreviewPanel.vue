@@ -48,18 +48,18 @@ const sandboxPreviewPanelRef = ref<any>();
 // 强制重新计算的触发器
 const refreshTrigger = ref(0);
 
-// 计算全局预览缩放比例（基于 sandboxCanvasStyle 的宽高）
+// 计算全局预览缩放比例（基于 sandboxCanvasStyle 的高度）
 const calculateGlobalPreviewScale = () => {
   // 依赖 refreshTrigger 来触发响应式更新
   refreshTrigger.value;
-  const containerWidth =
-    sandboxPreviewPanelRef.value?.offsetWidth || window.innerWidth;
+  const containerHeight =
+    sandboxPreviewPanelRef.value?.offsetHeight || window.innerHeight;
 
-  // 使用 sandboxCanvasStyle 中的宽度作为标准
-  const standardWidth = editorDataStore.sandboxCanvasStyle.width;
+  // 使用 sandboxCanvasStyle 中的高度作为标准
+  const standardHeight = editorDataStore.sandboxCanvasStyle.height;
 
-  // 基于 sandboxCanvasStyle 宽度计算全局缩放比例
-  return containerWidth / standardWidth;
+  // 基于 sandboxCanvasStyle 高度计算全局缩放比例
+  return containerHeight / standardHeight;
 };
 
 const getPreviewAreaItemStyle = (style: any) => {

@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-10-21 17:19:04
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-28 17:26:33
+ * @LastEditTime: 2025-10-29 10:07:40
  * @Description: 
 -->
 <template>
@@ -60,7 +60,7 @@ import DashEditorHeader from "./DashEditorHeader.vue";
 import { EditorState } from "./types";
 import { useEditorDataStore } from "./store/editorData";
 import { storeToRefs } from "pinia";
-import EditorCanvasCore from "./core/EditorCanvasCore.vue";
+import EditorCanvasCore from "./components/EditorCanvasCore.vue";
 import { changeComponentSizeWithScale } from "./utils/changeComponentsSizeWithScale";
 import { v4 as uuidv4 } from "uuid";
 import { componentList } from "./cursorComponent/config";

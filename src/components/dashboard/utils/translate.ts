@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-09-29 16:13:34
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-15 14:31:40
+ * @LastEditTime: 2025-10-29 10:52:14
  * @Description:
  */
 
@@ -33,10 +33,6 @@ export function changeStyleWithScale(value, scale) {
 
 export function toPercent(val) {
   return val * 100 + "%";
-}
-
-export function mod360(deg) {
-  return (deg + 360) % 360;
 }
 
 // 求两点之间的中点坐标

@@ -84,7 +84,7 @@
         <EditorToolBar />
       </main>
     </el-container>
-    <EditorPreview v-if="isPreviewMode"/>
+    <EditorPreview v-if="isPreviewMode" />
   </div>
 </template>
 
@@ -99,13 +99,13 @@ import {
 } from "vue";
 import { storeToRefs } from "pinia";
 import { v4 as uuidv4 } from "uuid";
-import EditorPreview from "./core/EditorPreview.vue";
+import EditorPreview from "./components/EditorPreview.vue";
 
 // 组件导入
 import DashEditorHeader from "./DashEditorHeader.vue";
-import EditorRuler from "./core/EditorRuler.vue";
-import EditorCanvasCore from "./core/EditorCanvasCore.vue";
-import EditorToolBar from "./core/EditorToolBar.vue";
+import EditorRuler from "./components/EditorRuler.vue";
+import EditorCanvasCore from "./components/EditorCanvasCore.vue";
+import EditorToolBar from "./components/EditorToolBar.vue";
 
 // Store 导入
 import { useEditorDataStore } from "./store/editorData";

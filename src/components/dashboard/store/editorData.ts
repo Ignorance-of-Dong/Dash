@@ -2,19 +2,29 @@
  * @Author: zhangzheng
  * @Date: 2025-09-25 19:12:54
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-28 16:27:35
+ * @LastEditTime: 2025-10-29 10:47:38
  * @Description:
  */
 import { defineStore } from "pinia";
 import { clone } from "ramda";
-import { DEFAULT_CANVAS_STYLE_DATA_DARK } from "../config";
 import { SENIOR_STYLE_SETTING_LIGHT } from "../config/chart";
 export const useEditorDataStore = defineStore("editorData", {
   state: () => {
     return {
       canvasStyleData: {
-        ...clone(DEFAULT_CANVAS_STYLE_DATA_DARK),
+        width: 1920,
+        height: 1080,
+        scale: 60,
+        scaleWidth: 60,
+        scaleHeight: 60,
+        backgroundColorSelect: true,
+        backgroundImageEnable: false,
+        background: "",
+        fontSize: 14,
+        fontFamily: "PingFang",
+        color: "#fff",
         backgroundColor: null,
+        component: {} as any,
       },
 
       editMode: "edit", // 编辑器模式 edit preview
@@ -32,7 +42,6 @@ export const useEditorDataStore = defineStore("editorData", {
         height: 1080,
         scale: 1,
       },
-      sandboxCanvasGap: 10,
       sandboxCanvas: {
         left: {
           id: "left",
@@ -45,7 +54,6 @@ export const useEditorDataStore = defineStore("editorData", {
           layout: "vertical",
           components: [] as any,
           componentGap: 10,
-          scale: 100,
           borderRadius: 10,
           squeezing: ["leftTop"], // 将要挤压的画布
           obstacle: ["bottom", "right"], // 障碍物
@@ -63,7 +71,6 @@ export const useEditorDataStore = defineStore("editorData", {
           isPositionLeftScale: true,
           layout: "horizontal",
           componentGap: 10,
-          scale: 100,
           borderRadius: 10,
           squeezing: ["left"], // 允许 left 画布挤压 leftTop
           obstacle: ["right"],
@@ -81,7 +88,6 @@ export const useEditorDataStore = defineStore("editorData", {
           components: [] as any,
           componentGap: 10,
           layout: "vertical",
-          scale: 100,
           borderRadius: 10,
           squeezing: [], // 允许所有画布挤压
           obstacle: ["leftTop"],
@@ -120,12 +126,7 @@ export const useEditorDataStore = defineStore("editorData", {
       this.isSpaceDown = value;
     },
     getEditor(canvasId = "canvas-main") {
-      console.log('[ "#editor-" + canvasId ] >', "#editor-" + canvasId);
-      console.log(document.querySelector("#editor-" + canvasId));
       this.editorMap[canvasId] = document.querySelector("#editor-" + canvasId);
-    },
-    setCanvasStyleScale(value) {
-      this.canvasStyleData.scale = value;
     },
     setContainerScale(value) {
       this.sandboxCanvasStyle.scale = value;
@@ -133,11 +134,7 @@ export const useEditorDataStore = defineStore("editorData", {
     setComponentData(componentData = []) {
       this.componentData = componentData;
     },
-    setCurTabName(val) {
-      this.curTabName = val;
-    },
     setCurComponent({ component, index }) {
-      console.log("[ setCurComponent ] >", component, index);
       if (!component && this.curComponent) {
         this.curComponent["editing"] = false;
         this.curComponent["resizing"] = false;
@@ -152,24 +149,12 @@ export const useEditorDataStore = defineStore("editorData", {
         clone(SENIOR_STYLE_SETTING_LIGHT);
       this.canvasStyleData = style;
     },
-    addComponent({
-      component,
-      index,
-      isFromGroup = false,
-      componentData = this.componentData,
-    }) {
+    addComponent({ component, index, componentData = this.componentData }) {
       if (index !== undefined) {
         componentData.splice(index, 0, component);
         this.setCurComponent({ component: component, index: index });
       } else {
         componentData.push(component);
-        console.log("[ componentData ] >", componentData);
-        console.log(component);
-
-        // this.setCurComponent({
-        //   component: component,
-        //   index: componentData.length - 1,
-        // });
       }
     },
     setShapeStyle({ top, left, width, height, rotate, transition }) {

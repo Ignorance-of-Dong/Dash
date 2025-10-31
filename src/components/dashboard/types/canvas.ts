@@ -10,8 +10,6 @@ export interface CanvasStyleData {
   width: number | string;
   /** 画布高度 */
   height: number | string;
-  /** 缩放比例 */
-  scale: number;
   /** 背景颜色 */
   backgroundColor?: string | null;
   /** 背景图片 */
