@@ -1,3 +1,4 @@
+import { componentList } from "./../cursorComponent/config";
 /**
  * @Author: zhangzheng
  * @Date: 2025-10-15 18:40:00
@@ -321,7 +322,9 @@ function calculateLeft(
   pointInfo: PointInfo,
   canvasClient,
   mode,
-  canvasData
+  canvasData,
+  originCanvas,
+  componentId
 ) {
   const { symmetricPoint, center } = pointInfo;
 
@@ -332,41 +335,71 @@ function calculateLeft(
   const height = style.height || 0;
 
   let resultWidth = Math.round(newWidth);
-  let resultLeft = ref(Math.round(curPosition.x));
+  let resultLeft = Math.round(curPosition.x);
   let resultTop = Math.round(center.y - height / 2);
-  const leftSpace = resultLeft.value < 0 ? 0 : resultLeft.value;
-  const rightSpace = canvasClient.width - resultLeft.value - resultWidth;
 
-  const newStyle = {
-    width: resultWidth,
-    left: resultLeft.value,
-    top: resultTop,
-  };
-  const isPass = adjustCanvasWidth(newStyle, canvasData, {
-    originStyle,
-    newWidth: symmetricPoint.x - curPosition.x,
-    newLeft: Math.round(curPosition.x),
-  });
-  // if (mode == "dash") {
+  const originComponent = originCanvas.components.find(
+    (item) => item.id === componentId
+  );
+  const leftSpace = resultLeft < 0 ? 0 : resultLeft;
+  const rightSpace =
+    Math.round(originCanvas.width) -
+    (Math.round(originComponent.style.left) || 0) -
+    (Math.round(originComponent.style.width) || 0);
+  console.log("rightSpace", rightSpace);
 
-  // }
+  let isPass: any = true;
 
-  // if (resultWidth > canvasClient.width - leftSpace - rightSpace) {
-  //   resultWidth = canvasClient.width - leftSpace - rightSpace;
-  //   resultLeft.value = 0;
-  // }
+  if (mode == "sandbox") {
+    isPass = adjustCanvasWidth(style, canvasData, {
+      originStyle,
+      newWidth: symmetricPoint.x - curPosition.x,
+      newLeft: Math.round(curPosition.x),
+      originCanvas,
+      componentId,
+      boundaryWidth: canvasClient.width - leftSpace - rightSpace,
+      componentRightSpace: rightSpace,
+    });
+  } else {
+    if (resultWidth > canvasClient.width - leftSpace - rightSpace) {
+      resultWidth = canvasClient.width - leftSpace - rightSpace;
+      resultLeft = 0;
+    }
+  }
+  console.log("resultLeft", resultLeft);
+
+  console.log(resultWidth, canvasClient.width, leftSpace, rightSpace);
 
   if (resultWidth < 50) {
     resultWidth = 50;
-    newStyle.left = style.left || 0;
+    resultLeft = style.left || 0;
   }
 
-  if (resultWidth > 0) {
-    if (isPass) {
+  if (resultWidth > 0 && isPass) {
+    if (mode == "sandbox") {
+      const diffWidth =
+        originCanvas.width - (isPass.canvasMinWidth || canvasData.minWidth);
+      const isMinWidth = resultWidth <= 50;
+      if (isMinWidth) {
+        console.log("resultLeft", resultLeft);
+
+        style.left = canvasData.width - resultWidth - rightSpace;
+      } else if (isPass.hasOwnProperty("left")) {
+        style.left = isPass.left;
+      } else {
+        style.left = resultLeft - diffWidth;
+      }
+      if (isPass.hasOwnProperty("width")) {
+        style.width = isPass.width;
+      } else {
+        style.width = resultWidth;
+      }
+    } else {
+      style.left = resultLeft;
       style.width = resultWidth;
-      style.left = newStyle.left;
-      style.top = resultTop;
     }
+
+    style.top = resultTop;
   }
 }
 
@@ -385,11 +418,22 @@ export default function calculateSimpleComponentPositionAndSize(
   curPosition: Point,
   pointInfo: PointInfo,
   mode: string,
-  canvasData: any
+  canvasData: any,
+  originCanvas: any,
+  componentId: string
 ) {
   const calcFunction = calcFunctions[point];
   if (calcFunction) {
-    calcFunction(style, curPosition, pointInfo, canvasClient, mode, canvasData);
+    calcFunction(
+      style,
+      curPosition,
+      pointInfo,
+      canvasClient,
+      mode,
+      canvasData,
+      originCanvas,
+      componentId
+    );
   }
 }
 

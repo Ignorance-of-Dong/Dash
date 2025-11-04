@@ -4,7 +4,7 @@ import { useEditorDataStore } from "../store/editorData";
  * @Author: zhangzheng
  * @Date: 2025-10-22 17:22:01
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-31 17:52:45
+ * @LastEditTime: 2025-11-04 18:04:52
  * @Description: 组件位置校正和重叠检测工具函数
  */
 
@@ -746,38 +746,64 @@ export const adjustCanvasWidth = (
       return Math.max(max, item.left + item.width);
     }, -Infinity);
 
-    // 计算组件相对于左扩展后，画布的新左边界位置
-    const componentWidthDiff =
-      triggerCanvas.width - otherData.originStyle.width;
-
-    const diff = otherData.newWidth - otherData.originStyle.width;
-
-    const newCanvasLeft = triggerCanvas.left - diff;
-    console.log(newCanvasLeft, "newCanvasLeft");
-
-    // 检查画布左扩展后是否会碰到障碍物
-    if (newCanvasLeft < obstacleRight) {
-      console.log("画布左扩展会碰到障碍物，限制组件调整");
-      // 阻止调整，恢复原始状态
-      // componentStyle.left = otherData.originStyle.left;
-      // componentStyle.width = otherData.originStyle.width;
-
-      return false;
+    const leftBuffer = otherData.originCanvas.left + otherData.newLeft;
+    const widthBuffer = otherData.originCanvas.width - otherData.newLeft;
+    if (leftBuffer <= obstacleRight) {
+      return {
+        left: 0,
+        width: triggerCanvas.width - otherData.componentRightSpace,
+      };
     }
 
-    if (otherData.newWidth + componentWidthDiff < triggerCanvas.minWidth) {
-      console.log("画布宽度小于最小宽度，限制组件调整");
-      triggerCanvas.width = triggerCanvas.minWidth;
-      // componentStyle.left = 0;
-      // componentStyle.width = otherData.originStyle.width;
-      return true;
+    const componentAllSpace = triggerCanvas.components
+      .filter((item) => item.id !== otherData.componentId)
+      .map((item) => {
+        console.log(item.style);
+        if (item.style.width + item.style.left > triggerCanvas.width) {
+          item.style.left = 0;
+        }
+        const rightSpace =
+          triggerCanvas.width -
+          (Math.round(item.style.width) +
+            (item.style.left < 0 ? 0 : item.style.left));
+
+        return Math.round(item.style.width) + (rightSpace < 0 ? 0 : rightSpace);
+      });
+
+    const minSpace =
+      Math.max(...componentAllSpace) > triggerCanvas.minWidth
+        ? Math.max(...componentAllSpace)
+        : triggerCanvas.minWidth;
+
+    if (widthBuffer <= minSpace) {
+      triggerCanvas.width = minSpace;
+      return {
+        canvasMinWidth: minSpace,
+      };
     }
 
-    if (componentStyle.left <= 0) {
-      triggerCanvas.left = newCanvasLeft + componentWidthDiff;
-      triggerCanvas.width = otherData.newWidth + componentWidthDiff;
-      // 组件的 left 值需要相应调整，保持相对于画布的正确位置
+    if (
+      otherData.newLeft <= 0 ||
+      triggerCanvas.width > otherData.originCanvas.minWidth
+    ) {
+      triggerCanvas.left = leftBuffer;
+      triggerCanvas.width = widthBuffer;
+
       componentStyle.left = 0;
+      otherData.originCanvas.components.forEach((item) => {
+        if (item.id !== otherData.componentId) {
+          const component = triggerCanvas.components.find(
+            (component) => component.id === item.id
+          );
+          const left =
+            item.style.left + (otherData.originCanvas.left - leftBuffer);
+
+          component.style.left = left < 0 ? 0 : Math.round(left);
+        }
+      });
+      return {
+        left: 0,
+      };
     }
 
     return true;

@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-10-14 17:28:22
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-28 18:11:25
+ * @LastEditTime: 2025-11-04 11:17:45
 -->
 <template>
   <div
@@ -198,6 +198,8 @@ const handleMouseDownOnPoint = (
 
   let isFirst = true;
 
+  const originCanvas = clone(editorDataStore.sandboxCanvas[props.canvasId]);
+
   // 鼠标移动处理函数
   const handleMouseMove = (moveEvent: MouseEvent) => {
     if (isFirst) {
@@ -243,7 +245,9 @@ const handleMouseDownOnPoint = (
         symmetricPoint,
       },
       editorDataStore.mode,
-      canvasData
+      canvasData,
+      originCanvas,
+      props.element.id
     );
 
     editorDataStore.setDragStatus("dragIn");
