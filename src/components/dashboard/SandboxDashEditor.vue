@@ -156,6 +156,8 @@ const handleComponentDragOver = (e: DragEvent): void => {
 const sandboxCanvasPreviewAreaItemRef = ref<HTMLElement | null>(null);
 const getSandboxCanvasPreviewAreaItemRefObj = ref({});
 
+editorDataStore.setSandboxCanvasStatus("idle");
+
 // 计算全局容器缩放比例（基于 sandboxCanvasStyle 的高度）
 const calculateContainerScale = () => {
   if (!sandboxCanvasContainerRef.value) return;
@@ -185,96 +187,48 @@ const getPreviewAreaItemStyle = (style: any) => {
   // 获取容器尺寸
   const containerWidth = sandboxCanvasContainerRef.value?.offsetWidth || 0;
   const containerHeight = sandboxCanvasContainerRef.value?.offsetHeight || 0;
-
+  if (!sandboxCanvasContainerRef.value) return;
   // 获取 sandboxCanvasStyle 中的缩放比例
   const canvasStyleScale = editorDataStore.sandboxCanvasStyle.scale || 1;
+  
+  
+  const width  = clone(style.width);
+  let height = clone(style.height);
+  let left = clone(style.left);
+  let top = clone(style.top);
 
-  // 计算真实逻辑坐标（用于存储和碰撞检测）
-  let realLogicLeft = style.left; // 默认使用原始值（真实坐标）
 
-  // 计算浏览器定位坐标（用于 DOM 渲染，缩放后的坐标）
-  let browserPositionLeft = style.left; // 默认使用原始值
+  if (style.heightType === "auto") {
+    height = containerHeight;
+  }
 
   if (style.floatPosition == "left") {
-    browserPositionLeft = 0;
-    realLogicLeft = 0; // 真实逻辑坐标也是 0
-  } else if (style.floatPosition == "right") {
-    // 浏览器定位：容器宽度 - 缩放后的画布宽度
-    browserPositionLeft = containerWidth - style.width * canvasStyleScale;
-    // 真实逻辑坐标：反推为真实坐标（用于碰撞检测）
-    realLogicLeft = browserPositionLeft / canvasStyleScale;
-  } else if (style.isPositionLeftScale) {
-    // isPositionLeftScale 表示 left 需要缩放显示
-    // 浏览器定位：原始值 * 缩放比例
-    browserPositionLeft = style.left * canvasStyleScale;
-    // 真实逻辑坐标：保持原始值（不缩放）
-    realLogicLeft = style.left;
-  } else {
-    // 普通情况：浏览器定位和逻辑坐标都使用原始值
-    browserPositionLeft = style.left;
-    realLogicLeft = style.left;
+    left = 0;
+  }
+  if (style.floatPosition == "right" && editorDataStore.sandboxCanvasStatus == "update") {
+
+    left = style.left;
+  }
+  if (style.floatPosition == "right" && editorDataStore.sandboxCanvasStatus == "idle") {
+    left = containerWidth - width * canvasStyleScale;
+    style.left = containerWidth - width * canvasStyleScale;
   }
 
-  // 根据 heightType 来计算高度，返回具体数值
-  let heightValue: number;
-  if (style.heightType === "auto") {
-    // "auto" 表示和父级保持一样的高度
-    heightValue = containerHeight;
-  } else {
-    heightValue = style.height;
+  
+
+  if (style.floatPosition == "leftTop" && style.isPositionLeftScale) {
+    left = style.left * canvasStyleScale;
   }
 
-  // 只对宽度和高度应用缩放（定位信息已适配浏览器，无需缩放）
-  const scaledHeight =
-    style.heightType != "auto" ? heightValue * canvasStyleScale : style.height;
-  const scaledWidth = style.width * canvasStyleScale;
 
-  let resultStyle: any = {
-    width: `${scaledWidth}px`,
-    height: `${scaledHeight}px`,
-  };
-
-  // 定位信息
-  if (style.top || style.top == 0) resultStyle.top = `${style.top}px`;
-  if (style.aligin == "center") {
-    resultStyle.left = `50%`;
-    resultStyle.transform = `translateX(-50%)`;
-  } else {
-    // 使用计算好的浏览器定位坐标（已经处理了 floatPosition 和 isPositionLeftScale）
-    if (browserPositionLeft !== undefined) {
-      resultStyle.left = `${browserPositionLeft}px`;
-    }
+  return {
+    width: width * canvasStyleScale + "px",
+    height: height + "px",
+    left: left + "px",
+    top: top + "px",
+    borderRadius: style.borderRadius * canvasStyleScale + "px",
   }
-  if (style.right || style.right == 0) resultStyle.right = `${style.right}px`;
-  if (style.bottom || style.bottom == 0)
-    resultStyle.bottom = `${style.bottom}px`;
-
-  if (style.borderRadius) {
-    resultStyle.borderRadius = `${style.borderRadius}px`;
-  }
-
-  // 同步画布数据到 sandboxCanvas，确保都是数字格式
-  if (editorDataStore.sandboxCanvas[style.id]) {
-    const canvas = editorDataStore.sandboxCanvas[style.id];
-
-    // 更新数字格式的尺寸和位置数据
-    if (typeof style.width === "number") {
-      canvas.width = style.width;
-    }
-
-    canvas.height = heightValue; // height 总是具体数值
-
-    if (typeof style.top === "number") {
-      canvas.top = style.top;
-    }
-
-    // ✅ 关键修复：存储真实逻辑坐标，而不是浏览器定位坐标
-    if (typeof realLogicLeft === "number") {
-      canvas.left = realLogicLeft;
-    }
-  }
-
-  return resultStyle;
+  
 };
 
 // 获取全局容器缩放比例，供组件使用

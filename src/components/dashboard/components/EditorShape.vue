@@ -206,6 +206,8 @@ const handleMouseDownOnPoint = (
       isFirst = false;
       return;
     }
+editorDataStore.setSandboxCanvasStatus("update");
+
 
     // 获取缩放比例
     const canvasStyleScale =

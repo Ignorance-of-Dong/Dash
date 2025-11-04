@@ -348,7 +348,7 @@ function calculateLeft(
     (Math.round(originComponent.style.width) || 0);
 
   let isPass: any = true;
-
+  
   if (mode == "sandbox") {
     isPass = adjustCanvasWidth(style, canvasData, {
       originStyle,
@@ -363,9 +363,7 @@ function calculateLeft(
       resultLeft = 0;
     }
   }
-  console.log("resultLeft", resultLeft);
 
-  console.log(resultWidth, canvasClient.width, leftSpace, rightSpace);
 
   if (resultWidth < 50) {
     resultWidth = 50;
@@ -398,6 +396,7 @@ function calculateLeft(
 
     style.top = resultTop;
   }
+
 }
 
 type EditorMode = "sandbox" | "dash";

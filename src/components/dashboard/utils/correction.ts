@@ -629,7 +629,6 @@ export const adjustCanvasWidth = (
       // 组件扩大：需要扩展画布
       const itemc = componentRightEdge - triggerCanvas.width;
 
-      console.log(itemc, "扩大距离");
 
       // ✅ 先检查 triggerCanvas 自己扩展后是否会碰到障碍物
       if (obstacleCnanvas.length > 0) {
@@ -639,7 +638,6 @@ export const adjustCanvasWidth = (
 
         if (newCanvasRightEdge > obstacleLeft) {
           // triggerCanvas 自己扩展后会碰到障碍物，计算允许的最大宽度
-          console.log("triggerCanvas 扩展后会碰到障碍物，限制组件宽度");
           const maxAllowedExpansion = Math.round(
             obstacleLeft - triggerCanvas.left - triggerCanvas.width
           );
@@ -745,10 +743,17 @@ export const adjustCanvasWidth = (
     const obstacleRight = obstacleCanvas.reduce((max, item) => {
       return Math.max(max, item.left + item.width);
     }, -Infinity);
-
-    const leftBuffer = otherData.originCanvas.left + otherData.newLeft;
+    
+    const leftBuffer = otherData.originCanvas.left + otherData.newLeft * canvasStyleScale;
     const widthBuffer = otherData.originCanvas.width - otherData.newLeft;
-    if (leftBuffer <= obstacleRight) {
+
+
+    // 障碍物判定
+    if (leftBuffer <= obstacleRight * canvasStyleScale) {
+      const mainContainer = editorDataStore.editorMap[triggerCanvas.id].parentElement.parentElement
+      const mainContainerWidth = mainContainer.getBoundingClientRect().width / canvasStyleScale;
+      triggerCanvas.width = mainContainerWidth - obstacleRight;
+      
       return {
         left: 0,
         width: triggerCanvas.width - otherData.componentRightSpace,
@@ -777,10 +782,9 @@ export const adjustCanvasWidth = (
       Math.max(...componentAllSpace) > triggerCanvas.minWidth
         ? Math.max(...componentAllSpace)
         : triggerCanvas.minWidth;
+
+
     // 最小边界判定
-
-    console.log("minSpace", minSpace);
-
     if (widthBuffer <= minSpace) {
       triggerCanvas.width = minSpace;
       return {
@@ -792,9 +796,10 @@ export const adjustCanvasWidth = (
       otherData.newLeft <= 0 ||
       triggerCanvas.width > otherData.originCanvas.minWidth
     ) {
+
+      
       triggerCanvas.left = leftBuffer;
       triggerCanvas.width = widthBuffer;
-
       componentStyle.left = 0;
       otherData.originCanvas.components.forEach((item) => {
         if (item.id !== otherData.componentId) {
@@ -802,8 +807,7 @@ export const adjustCanvasWidth = (
             (component) => component.id === item.id
           );
           const left =
-            item.style.left + (otherData.originCanvas.left - leftBuffer);
-
+            item.style.left + (otherData.originCanvas.left - leftBuffer) / canvasStyleScale;
           component.style.left = left < 0 ? 0 : Math.round(left);
         }
       });

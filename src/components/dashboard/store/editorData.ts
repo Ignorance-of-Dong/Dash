@@ -42,6 +42,7 @@ export const useEditorDataStore = defineStore("editorData", {
         height: 1080,
         scale: 1,
       },
+      sandboxCanvasStatus: "idle", // idle 空闲 update 更新
       sandboxCanvas: {
         left: {
           id: "left",
@@ -115,6 +116,9 @@ export const useEditorDataStore = defineStore("editorData", {
     };
   },
   actions: {
+    setSandboxCanvasStatus(status) {
+      this.sandboxCanvasStatus = status;
+    },
     addSandboxComponent({ component, canvasId }) {
       this.sandboxCanvas[canvasId].components.push(component);
     },
