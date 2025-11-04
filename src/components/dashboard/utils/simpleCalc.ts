@@ -346,18 +346,15 @@ function calculateLeft(
     Math.round(originCanvas.width) -
     (Math.round(originComponent.style.left) || 0) -
     (Math.round(originComponent.style.width) || 0);
-  console.log("rightSpace", rightSpace);
 
   let isPass: any = true;
 
   if (mode == "sandbox") {
     isPass = adjustCanvasWidth(style, canvasData, {
       originStyle,
-      newWidth: symmetricPoint.x - curPosition.x,
       newLeft: Math.round(curPosition.x),
       originCanvas,
       componentId,
-      boundaryWidth: canvasClient.width - leftSpace - rightSpace,
       componentRightSpace: rightSpace,
     });
   } else {

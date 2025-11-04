@@ -4,7 +4,7 @@ import { useEditorDataStore } from "../store/editorData";
  * @Author: zhangzheng
  * @Date: 2025-10-22 17:22:01
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-11-04 18:04:52
+ * @LastEditTime: 2025-11-04 18:38:57
  * @Description: 组件位置校正和重叠检测工具函数
  */
 
@@ -762,11 +762,14 @@ export const adjustCanvasWidth = (
         if (item.style.width + item.style.left > triggerCanvas.width) {
           item.style.left = 0;
         }
-        const rightSpace =
-          triggerCanvas.width -
-          (Math.round(item.style.width) +
-            (item.style.left < 0 ? 0 : item.style.left));
 
+        const componentItem = otherData.originCanvas.components.find(
+          (citem) => citem.id === item.id
+        );
+        const rightSpace =
+          otherData.originCanvas.width -
+          (Math.round(componentItem.style.width) +
+            (componentItem.style.left < 0 ? 0 : componentItem.style.left));
         return Math.round(item.style.width) + (rightSpace < 0 ? 0 : rightSpace);
       });
 
@@ -774,6 +777,9 @@ export const adjustCanvasWidth = (
       Math.max(...componentAllSpace) > triggerCanvas.minWidth
         ? Math.max(...componentAllSpace)
         : triggerCanvas.minWidth;
+    // 最小边界判定
+
+    console.log("minSpace", minSpace);
 
     if (widthBuffer <= minSpace) {
       triggerCanvas.width = minSpace;
