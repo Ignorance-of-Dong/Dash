@@ -251,10 +251,12 @@ function calculateRight(
   pointInfo: PointInfo,
   canvasClient,
   mode,
-  canvasData
+  canvasData,
+  originCanvas,
+  componentId
 ) {
   const { symmetricPoint, center } = pointInfo;
-
+  const originStyle = clone(style);
   // 计算新宽度
   const newWidth = curPosition.x - symmetricPoint.x;
   const height = style.height || 0;
@@ -262,6 +264,18 @@ function calculateRight(
   let resultWidth = Math.round(newWidth);
   let resultLeft = ref(Math.round(symmetricPoint.x));
   let resultTop = Math.round(center.y - height / 2);
+
+  let isPass: any = true;
+
+  if (mode == "sandbox") {
+    isPass = adjustCanvasWidth(style, canvasData, {
+      originStyle,
+      newLeft: Math.round(symmetricPoint.x),
+      newWidth: resultWidth,
+      originCanvas,
+      componentId,
+    });
+  }
 
   if (mode == "dash" && resultWidth > canvasClient.width - resultLeft.value) {
     resultWidth = canvasClient.width - resultLeft.value;
@@ -273,11 +287,21 @@ function calculateRight(
   }
 
   if (resultWidth > 0) {
-    style.width = resultWidth;
+    if (mode == "sandbox") {
+
+      if (isPass && isPass.hasOwnProperty("width")) {
+        style.width = isPass.width;
+      } else {
+        style.width = resultWidth;
+      }
+    } else {
+      style.width = originStyle.width;
+    }
     style.left = resultLeft.value;
     style.top = resultTop;
   }
-  adjustCanvasWidth(style, canvasData);
+  
+  
 }
 
 /**
