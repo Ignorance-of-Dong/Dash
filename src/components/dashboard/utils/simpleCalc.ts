@@ -288,7 +288,6 @@ function calculateRight(
 
   if (resultWidth > 0) {
     if (mode == "sandbox") {
-
       if (isPass && isPass.hasOwnProperty("width")) {
         style.width = isPass.width;
       } else {
@@ -300,8 +299,6 @@ function calculateRight(
     style.left = resultLeft.value;
     style.top = resultTop;
   }
-  
-  
 }
 
 /**
@@ -372,7 +369,7 @@ function calculateLeft(
     (Math.round(originComponent.style.width) || 0);
 
   let isPass: any = true;
-  
+
   if (mode == "sandbox") {
     isPass = adjustCanvasWidth(style, canvasData, {
       originStyle,
@@ -387,7 +384,6 @@ function calculateLeft(
       resultLeft = 0;
     }
   }
-
 
   if (resultWidth < 50) {
     resultWidth = 50;
@@ -417,10 +413,8 @@ function calculateLeft(
       style.left = resultLeft;
       style.width = resultWidth;
     }
-
     style.top = resultTop;
   }
-
 }
 
 type EditorMode = "sandbox" | "dash";

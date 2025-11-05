@@ -4,7 +4,7 @@ import { useEditorDataStore } from "../store/editorData";
  * @Author: zhangzheng
  * @Date: 2025-10-22 17:22:01
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-11-04 18:38:57
+ * @LastEditTime: 2025-11-05 11:01:08
  * @Description: 组件位置校正和重叠检测工具函数
  */
 
@@ -540,12 +540,14 @@ export const adjustCanvasWidth = (
 ) => {
   const editorDataStore = useEditorDataStore();
   const sandboxCanvas = editorDataStore.sandboxCanvas;
-  
 
   // 获取缩放比例
   const canvasStyleScale = editorDataStore.sandboxCanvasStyle?.scale || 1;
-  const mainContainer = editorDataStore.editorMap[triggerCanvas.id].parentElement.parentElement
-      const mainContainerWidth = Math.round(mainContainer.getBoundingClientRect().width / canvasStyleScale);
+  const mainContainer =
+    editorDataStore.editorMap[triggerCanvas.id].parentElement.parentElement;
+  const mainContainerWidth = Math.round(
+    mainContainer.getBoundingClientRect().width / canvasStyleScale
+  );
 
   // 查找当前画布右侧的画布(并且支持被当前画布挤压的画布)
   let canvasAboutRight: any = [];
@@ -575,15 +577,18 @@ export const adjustCanvasWidth = (
     }, Infinity);
 
     // 获取最左侧障碍物的宽度
-    const obstacleLeftWidth = obstacleCnanvas.find((item) => item.left === obstacleLeft)?.width;
+    const obstacleLeftWidth = obstacleCnanvas.find(
+      (item) => item.left === obstacleLeft
+    )?.width;
 
-    const squeezingCanvas= outherCanvas.filter((item) => triggerCanvas.squeezing.includes(item.id));
+    const squeezingCanvas = outherCanvas.filter((item) =>
+      triggerCanvas.squeezing.includes(item.id)
+    );
 
     const squeezingCanvasMaxWidth = squeezingCanvas.reduce((max, item) => {
       return Math.max(max, item.width);
     }, 0);
 
-    
     const widthBuffer = otherData.newLeft + otherData.newWidth;
 
     const componentAllSpace = triggerCanvas.components
@@ -592,19 +597,30 @@ export const adjustCanvasWidth = (
         const componentItem = otherData.originCanvas.components.find(
           (citem) => citem.id === item.id
         );
-        return Math.round(item.style.width) + (componentItem.style.left < 0 ? 0 : componentItem.style.left);
+        return (
+          Math.round(item.style.width) +
+          (componentItem.style.left < 0 ? 0 : componentItem.style.left)
+        );
       });
 
-    const minSpace = Math.max(...componentAllSpace) > triggerCanvas.minWidth
-    ? Math.max(...componentAllSpace)
-    : triggerCanvas.minWidth;;
+    const minSpace =
+      Math.max(...componentAllSpace) > triggerCanvas.minWidth
+        ? Math.max(...componentAllSpace)
+        : triggerCanvas.minWidth;
 
-    if (widthBuffer * canvasStyleScale + squeezingCanvasMaxWidth * canvasStyleScale  > obstacleLeft) {
-
-      
-      triggerCanvas.width = mainContainerWidth - obstacleLeftWidth - squeezingCanvasMaxWidth;
+    if (
+      widthBuffer * canvasStyleScale +
+        squeezingCanvasMaxWidth * canvasStyleScale >
+      obstacleLeft
+    ) {
+      triggerCanvas.width =
+        mainContainerWidth - obstacleLeftWidth - squeezingCanvasMaxWidth;
       return {
-        width: mainContainerWidth - obstacleLeftWidth - squeezingCanvasMaxWidth - otherData.newLeft,
+        width:
+          mainContainerWidth -
+          obstacleLeftWidth -
+          squeezingCanvasMaxWidth -
+          otherData.newLeft,
       };
     }
 
@@ -616,7 +632,7 @@ export const adjustCanvasWidth = (
     triggerCanvas.width = widthBuffer;
     outherCanvas.forEach((item) => {
       if (triggerCanvas.squeezing.includes(item.id)) {
-        item.left = widthBuffer
+        item.left = widthBuffer;
       }
     });
     return true;
@@ -643,22 +659,20 @@ export const adjustCanvasWidth = (
     const obstacleRight = obstacleCanvas.reduce((max, item) => {
       return Math.max(max, item.left + item.width);
     }, -Infinity);
-    
-    const leftBuffer = otherData.originCanvas.left + otherData.newLeft * canvasStyleScale;
-    const widthBuffer = otherData.originCanvas.width - otherData.newLeft;
 
+    const leftBuffer =
+      otherData.originCanvas.left + otherData.newLeft * canvasStyleScale;
+    const widthBuffer = otherData.originCanvas.width - otherData.newLeft;
 
     // 障碍物判定
     if (leftBuffer <= obstacleRight * canvasStyleScale) {
-      
       triggerCanvas.width = mainContainerWidth - obstacleRight;
-      
+
       return {
         left: 0,
         width: triggerCanvas.width - otherData.componentRightSpace,
       };
     }
-
 
     const componentAllSpace = triggerCanvas.components
       .filter((item) => item.id !== otherData.componentId)
@@ -683,10 +697,10 @@ export const adjustCanvasWidth = (
         ? Math.max(...componentAllSpace)
         : triggerCanvas.minWidth;
 
-
     // 最小边界判定
     if (widthBuffer <= minSpace) {
       triggerCanvas.width = minSpace;
+      triggerCanvas.left = mainContainerWidth * canvasStyleScale - minSpace;
       return {
         canvasMinWidth: minSpace,
       };
@@ -696,8 +710,6 @@ export const adjustCanvasWidth = (
       otherData.newLeft <= 0 ||
       triggerCanvas.width > otherData.originCanvas.minWidth
     ) {
-
-      
       triggerCanvas.left = leftBuffer;
       triggerCanvas.width = widthBuffer;
       componentStyle.left = 0;
@@ -707,7 +719,8 @@ export const adjustCanvasWidth = (
             (component) => component.id === item.id
           );
           const left =
-            item.style.left + (otherData.originCanvas.left - leftBuffer) / canvasStyleScale;
+            item.style.left +
+            (otherData.originCanvas.left - leftBuffer) / canvasStyleScale;
           component.style.left = left < 0 ? 0 : Math.round(left);
         }
       });

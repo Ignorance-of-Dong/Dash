@@ -2,17 +2,22 @@
  * @Author: zhangzheng
  * @Date: 2025-10-28 10:43:51
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-28 14:46:09
+ * @LastEditTime: 2025-11-05 18:22:13
  * @Description: 
 -->
 <template>
-  <div class="sandbox-preview-panel" ref="sandboxPreviewPanelRef">
+  <div
+    class="sandbox-preview-panel"
+    ref="sandboxPreviewPanelRef"
+    :key="refreshTrigger"
+  >
     <div
       class="sandbox-canvas-preview-area-item"
       v-for="item in editorDataStore.sandboxCanvas"
       :key="item.id"
       :id="item.id"
       :canvasId="item.id"
+      v-memo="[refreshTrigger]"
       :style="getPreviewAreaItemStyle(item)"
     >
       <div
@@ -39,8 +44,10 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, reactive, computed } from "vue";
 import { useEditorDataStore } from "../store/editorData";
+import { clone } from "ramda";
+import { useThrottleFn } from "@vueuse/core";
 
 const editorDataStore = useEditorDataStore();
 const sandboxPreviewPanelRef = ref<any>();
@@ -48,92 +55,92 @@ const sandboxPreviewPanelRef = ref<any>();
 // 强制重新计算的触发器
 const refreshTrigger = ref(0);
 
-// 计算全局预览缩放比例（基于 sandboxCanvasStyle 的高度）
-const calculateGlobalPreviewScale = () => {
-  // 依赖 refreshTrigger 来触发响应式更新
-  refreshTrigger.value;
-  const containerHeight =
-    sandboxPreviewPanelRef.value?.offsetHeight || window.innerHeight;
-
-  // 使用 sandboxCanvasStyle 中的高度作为标准
-  const standardHeight = editorDataStore.sandboxCanvasStyle.height;
-
-  // 基于 sandboxCanvasStyle 高度计算全局缩放比例
-  return containerHeight / standardHeight;
-};
+const scaleStatus = reactive({
+  scale: 1,
+  widthScale: 1,
+  heightScale: 1,
+});
 
 const getPreviewAreaItemStyle = (style: any) => {
   // 获取预览容器尺寸
   const containerWidth =
     sandboxPreviewPanelRef.value?.offsetWidth || window.innerWidth;
 
-  // 计算原始画布尺寸
-  const originalCanvasWidth = style.width || 400;
-  const originalCanvasHeight = style.height || 600; // 默认高度
+  const containerHeight =
+    sandboxPreviewPanelRef.value?.offsetHeight || window.innerHeight;
+  const width = clone(style.width);
+  let height = clone(style.height);
+  let left = clone(style.left);
+  let top = clone(style.top);
 
-  // 使用全局缩放比例（基于 sandboxCanvasStyle 的宽高）
-  const finalScale = calculateGlobalPreviewScale();
+  const relHeight =
+    containerHeight < editorDataStore.sandboxCanvasStyle.height
+      ? containerHeight
+      : editorDataStore.sandboxCanvasStyle.height;
 
-  // 计算缩放后的画布尺寸（只涉及宽高）
-  const scaledWidth = originalCanvasWidth * finalScale;
-  const scaledHeight = originalCanvasHeight * finalScale;
-
-  // 定位计算：根据预览容器尺寸重新定位画布
-  let positionLeft: number;
-  let positionTop: number;
-
-  // 处理不同的定位方式
-  if (style.floatPosition === "left") {
-    positionLeft = style.left || 0;
-  } else if (style.floatPosition === "right") {
-    positionLeft = containerWidth - scaledWidth - (style.right || 0);
-  } else if (style.aligin === "center") {
-    positionLeft = (containerWidth - scaledWidth) / 2;
-  } else {
-    // 默认定位：按比例缩放原始位置
-    positionLeft = (style.left || 0) * finalScale;
+  if (style.heightType === "auto") {
+    if (isUseWidthScale.value) {
+      height = relHeight;
+    } else {
+      height = containerHeight;
+    }
   }
 
-  positionTop = (style.top || 0) * finalScale;
-
-  const resultStyle: any = {};
-  resultStyle.width = `${Math.floor(scaledWidth)}px`;
-  resultStyle.height = `${Math.floor(scaledHeight)}px`;
-  resultStyle.top = `${Math.floor(positionTop)}px`;
-  resultStyle.left = `${Math.floor(positionLeft)}px`;
-
-  if (style.borderRadius) {
-    const scaledBorderRadius = (style.borderRadius || 0) * finalScale;
-    resultStyle.borderRadius = `${Math.floor(scaledBorderRadius)}px`;
+  if (style.floatPosition == "left") {
+    left = 0;
   }
+  if (
+    style.floatPosition == "right" &&
+    editorDataStore.sandboxCanvasStatus == "update"
+  ) {
+    left = style.left;
+  }
+
+  if (
+    style.floatPosition == "right" &&
+    editorDataStore.sandboxCanvasStatus == "idle"
+  ) {
+    left = containerWidth - width * scaleStatus.scale;
+    style.left = containerWidth - width * scaleStatus.scale;
+  }
+
+  if (style.floatPosition == "leftTop" && style.isPositionLeftScale) {
+    left = style.left * scaleStatus.scale;
+  }
+
+  if (isUseWidthScale.value) {
+    top = (containerHeight - relHeight) / 2;
+  }
+  const resultStyle: any = {
+    width: width * scaleStatus.scale + "px",
+    height: height + "px",
+    left: left + "px",
+    top: top + "px",
+    borderRadius: style.borderRadius * scaleStatus.scale + "px",
+  };
 
   return resultStyle;
 };
+// const isUseWidthScale = false;
+const isUseWidthScale = computed(() => {
+  if (!sandboxPreviewPanelRef.value) return false;
+  const containerWidth = sandboxPreviewPanelRef.value?.offsetWidth || 0;
+  const canvasAllWidth = Object.values(editorDataStore.sandboxCanvas).reduce(
+    (acc, item) => {
+      return acc + item.width;
+    },
+    0
+  );
+  return canvasAllWidth * scaleStatus.heightScale > containerWidth;
+});
 
 const getShapeItemStyleForComponent = (componentItem: any) => {
-  // 获取父级画布的缩放信息
-  const parentCanvas = Object.values(editorDataStore.sandboxCanvas).find(
-    (canvas: any) =>
-      canvas.components.some((comp: any) => comp.id === componentItem.id)
-  ) as any;
-
-  if (!parentCanvas) return {};
-
-  // 使用全局缩放比例（基于 sandboxCanvasStyle 的宽高）
-  const finalScale = calculateGlobalPreviewScale();
-
-  // 组件定位：根据预览容器尺寸重新定位组件在画布内的位置
-  const scaledLeft = (componentItem.style.left || 0) * finalScale;
-  const scaledTop = (componentItem.style.top || 0) * finalScale;
-
   return {
     position: "absolute" as const,
-    width: `${componentItem.style.width || 0}px`, // 原始宽度：缩放通过 transform 处理
-    height: `${componentItem.style.height || 0}px`, // 原始高度：缩放通过 transform 处理
-    left: `${Math.floor(scaledLeft)}px`, // 重新定位：根据容器尺寸计算
-    top: `${Math.floor(scaledTop)}px`, // 重新定位：根据容器尺寸计算
-    transform: `scale(${finalScale})`, // 统一缩放：保持宽高比
-    transformOrigin: "top left" as const,
+    width: componentItem.style.width * scaleStatus.scale + "px",
+    height: componentItem.style.height * scaleStatus.scale + "px",
+    left: componentItem.style.left * scaleStatus.scale + "px",
+    top: componentItem.style.top * scaleStatus.scale + "px",
   };
 };
 
@@ -142,10 +149,30 @@ const getComponentStyle = (style: any) => {
 };
 
 // 触发重新计算
-const triggerRecalculation = () => {
+const triggerRecalculation = useThrottleFn(() => {
+  if (!sandboxPreviewPanelRef.value) return;
+
+  console.log("[ 1 ] >", 1);
   refreshTrigger.value++;
-  console.log(`预览面板尺寸变化，触发重新计算: ${refreshTrigger.value}`);
-};
+
+  const containerHeight = sandboxPreviewPanelRef.value.offsetHeight;
+  const containerWidth = sandboxPreviewPanelRef.value?.offsetWidth || 0;
+
+  const standardHeight = editorDataStore.sandboxCanvasStyle.height;
+  const standardWidth = editorDataStore.sandboxCanvasStyle.width;
+
+  if (containerHeight === standardHeight) {
+    scaleStatus.heightScale = 1;
+  } else {
+    scaleStatus.heightScale = containerHeight / standardHeight;
+    scaleStatus.widthScale = containerWidth / standardWidth;
+  }
+  if (isUseWidthScale.value) {
+    scaleStatus.scale = scaleStatus.widthScale;
+  } else {
+    scaleStatus.scale = scaleStatus.heightScale;
+  }
+}, 1000);
 
 // 窗口大小变化处理函数
 const handleWindowResize = () => {
@@ -159,6 +186,7 @@ const handleWindowResize = () => {
 onMounted(() => {
   // 监听浏览器窗口大小变化
   window.addEventListener("resize", handleWindowResize);
+  triggerRecalculation();
   console.log("开始监听浏览器窗口大小变化");
 });
 

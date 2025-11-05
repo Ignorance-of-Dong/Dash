@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-10-21 17:19:04
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-29 10:07:40
+ * @LastEditTime: 2025-11-05 18:19:26
  * @Description: 
 -->
 <template>
@@ -10,48 +10,40 @@
     <template #header>
       <DashEditorHeader @preview="togglePreviewMode" />
     </template>
-
-    <template #content>
-      <div class="sandbox-canvas-container" ref="sandboxCanvasContainerRef">
+    <div class="sandbox-canvas-container" ref="sandboxCanvasContainerRef">
+      <div class="sandbox-canvas-preview-area" :key="scaleKey">
         <div
-          class="sandbox-canvas-preview-area"
-          :key="editorDataStore.sandboxCanvasStyle.scale"
+          class="sandbox-canvas-preview-area-item"
+          v-for="item in editorDataStore.sandboxCanvas"
+          :key="item.id"
+          :ref="
+            (domRef) =>
+              (getSandboxCanvasPreviewAreaItemRefObj[item.id] = domRef)
+          "
+          @drop="handleComponentDrop"
+          :id="item.id"
+          :canvasId="item.id"
+          @dragover="handleComponentDragOver"
+          :style="getPreviewAreaItemStyle(item)"
         >
           <div
-            class="sandbox-canvas-preview-area-item"
-            v-for="item in editorDataStore.sandboxCanvas"
-            :key="item.id"
-            :ref="
-              (domRef) =>
-                (getSandboxCanvasPreviewAreaItemRefObj[item.id] = domRef)
-            "
-            @drop="handleComponentDrop"
-            :id="item.id"
+            class="dragtips-area-container"
+            :style="getDragTipsAreaStyle(item)"
             :canvasId="item.id"
-            @dragover="handleComponentDragOver"
-            :style="getPreviewAreaItemStyle(item)"
-          >
-            <div
-              class="dragtips-area-container"
-              :style="getDragTipsAreaStyle(item)"
-              :canvasId="item.id"
-              v-if="showDragTipsArea(item)"
-            >
-              {{ item.id }}
-            </div>
-            <EditorCanvasCore
-              class="canvas-core editor-main"
-              ref="canvasCoreRef"
-              :canvas-id="item.id"
-              :componentData="item.components"
-              :canvas-style-data="item"
-            />
-          </div>
+            v-if="showDragTipsArea(item)"
+          ></div>
+          <EditorCanvasCore
+            class="canvas-core editor-main"
+            ref="canvasCoreRef"
+            :canvas-id="item.id"
+            :componentData="item.components"
+            :canvas-style-data="item"
+          />
         </div>
       </div>
-    </template>
+    </div>
+    <SandboxPreviewPanel v-if="isPreviewMode" v-memo="[isPreviewMode]" />
   </DashContainer>
-  <SandboxPreviewPanel v-if="isPreviewMode" />
 </template>
 <script setup lang="ts">
 import { onMounted, onUnmounted, reactive, ref, nextTick } from "vue";
@@ -70,6 +62,7 @@ import {
   correctionComponentPosition,
   getRemainingArae,
 } from "./utils/correction";
+import { computed } from "vue";
 
 // 从主数据 Store 解构响应式数据
 const editorDataStore = useEditorDataStore();
@@ -158,30 +151,49 @@ const getSandboxCanvasPreviewAreaItemRefObj = ref({});
 
 editorDataStore.setSandboxCanvasStatus("idle");
 
+const scaleKey = ref(0);
 // 计算全局容器缩放比例（基于 sandboxCanvasStyle 的高度）
 const calculateContainerScale = () => {
   if (!sandboxCanvasContainerRef.value) return;
+  scaleKey.value++;
 
-  const currentHeight = sandboxCanvasContainerRef.value.offsetHeight;
+  const containerHeight = sandboxCanvasContainerRef.value.offsetHeight;
+  const containerWidth = sandboxCanvasContainerRef.value?.offsetWidth || 0;
 
-  // 使用 sandboxCanvasStyle 中的高度作为标准
   const standardHeight = editorDataStore.sandboxCanvasStyle.height;
+  const standardWidth = editorDataStore.sandboxCanvasStyle.width;
 
-  // 计算缩放比例：以 sandboxCanvasStyle 高度为基准
-  if (standardHeight > 0) {
-    if (currentHeight === standardHeight) {
-      // 如果高度相等，保持缩放不变
-      editorDataStore.setContainerScale(1);
-    } else {
-      // 否则计算新的缩放比例
-      editorDataStore.setContainerScale(currentHeight / standardHeight);
-    }
-
-    console.log(
-      `容器缩放比例更新: ${editorDataStore.scale} (${currentHeight}/${standardHeight})`
+  if (containerHeight === standardHeight) {
+    editorDataStore.setContainerHeightScale(1);
+  } else {
+    editorDataStore.setContainerHeightScale(containerHeight / standardHeight);
+    editorDataStore.setContainerWidthScale(containerWidth / standardWidth);
+  }
+  if (isUseWidthScale.value) {
+    editorDataStore.setContainerScale(
+      editorDataStore.sandboxCanvasStyle.widthScale
+    );
+  } else {
+    editorDataStore.setContainerScale(
+      editorDataStore.sandboxCanvasStyle.heightScale
     );
   }
 };
+
+const isUseWidthScale = computed(() => {
+  if (!sandboxCanvasContainerRef.value) return false;
+  const containerWidth = sandboxCanvasContainerRef.value?.offsetWidth || 0;
+  const canvasAllWidth = Object.values(editorDataStore.sandboxCanvas).reduce(
+    (acc, item) => {
+      return acc + item.width;
+    },
+    0
+  );
+  return (
+    canvasAllWidth * editorDataStore.sandboxCanvasStyle.heightScale >
+    containerWidth
+  );
+});
 
 const getPreviewAreaItemStyle = (style: any) => {
   // 获取容器尺寸
@@ -190,45 +202,59 @@ const getPreviewAreaItemStyle = (style: any) => {
   if (!sandboxCanvasContainerRef.value) return;
   // 获取 sandboxCanvasStyle 中的缩放比例
   const canvasStyleScale = editorDataStore.sandboxCanvasStyle.scale || 1;
-  
-  
-  const width  = clone(style.width);
+
+  const width = clone(style.width);
   let height = clone(style.height);
   let left = clone(style.left);
   let top = clone(style.top);
 
+  const relHeight =
+    containerHeight < editorDataStore.sandboxCanvasStyle.height - 64
+      ? containerHeight
+      : editorDataStore.sandboxCanvasStyle.height - 64;
 
   if (style.heightType === "auto") {
-    height = containerHeight;
+    if (isUseWidthScale.value) {
+      height = relHeight;
+    } else {
+      height = containerHeight;
+    }
   }
 
   if (style.floatPosition == "left") {
     left = 0;
   }
-  if (style.floatPosition == "right" && editorDataStore.sandboxCanvasStatus == "update") {
-
+  if (
+    style.floatPosition == "right" &&
+    editorDataStore.sandboxCanvasStatus == "update"
+  ) {
     left = style.left;
   }
-  if (style.floatPosition == "right" && editorDataStore.sandboxCanvasStatus == "idle") {
+
+  if (
+    style.floatPosition == "right" &&
+    editorDataStore.sandboxCanvasStatus == "idle"
+  ) {
     left = containerWidth - width * canvasStyleScale;
     style.left = containerWidth - width * canvasStyleScale;
   }
-
-  
 
   if (style.floatPosition == "leftTop" && style.isPositionLeftScale) {
     left = style.left * canvasStyleScale;
   }
 
-
-  return {
+  if (isUseWidthScale.value) {
+    top = (containerHeight - relHeight) / 2;
+  }
+  const resultStyle: any = {
     width: width * canvasStyleScale + "px",
     height: height + "px",
     left: left + "px",
     top: top + "px",
     borderRadius: style.borderRadius * canvasStyleScale + "px",
-  }
-  
+  };
+
+  return resultStyle;
 };
 
 // 获取全局容器缩放比例，供组件使用
@@ -265,6 +291,7 @@ const togglePreviewMode = () => {
 const handleWindowResize = () => {
   // 使用 nextTick 确保 DOM 更新完成后再计算
   nextTick(() => {
+    editorDataStore.setSandboxCanvasStatus("idle");
     calculateContainerScale();
   });
 };
@@ -325,6 +352,7 @@ defineExpose({
   width: 100%;
   height: calc(100% - 64px);
   position: absolute;
+  overflow: hidden;
   .sandbox-canvas-preview-area-item {
     position: absolute;
     border-radius: 10px;

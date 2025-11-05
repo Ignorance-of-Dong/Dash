@@ -2,19 +2,19 @@
  * @Author: zhangzheng
  * @Date: 2025-10-21 17:23:55
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-28 15:34:56
+ * @LastEditTime: 2025-11-05 17:23:18
  * @Description: 
 -->
 <template>
   <div class="dash-container-main">
     <slot name="header" />
-    <el-container
+    <div
       element-loading-background="rgba(0, 0, 0, 0)"
       class="editor-container"
       :loading="loading"
     >
-      <slot name="content" />
-    </el-container>
+      <slot />
+    </div>
   </div>
 </template>
 <script setup lang="ts">

@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-09-25 19:12:54
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-29 10:47:38
+ * @LastEditTime: 2025-11-05 15:38:50
  * @Description:
  */
 import { defineStore } from "pinia";
@@ -41,6 +41,8 @@ export const useEditorDataStore = defineStore("editorData", {
         width: 1920,
         height: 1080,
         scale: 1,
+        widthScale: 1,
+        heightScale: 1,
       },
       sandboxCanvasStatus: "idle", // idle 空闲 update 更新
       sandboxCanvas: {
@@ -134,6 +136,12 @@ export const useEditorDataStore = defineStore("editorData", {
     },
     setContainerScale(value) {
       this.sandboxCanvasStyle.scale = value;
+    },
+    setContainerHeightScale(value) {
+      this.sandboxCanvasStyle.heightScale = value;
+    },
+    setContainerWidthScale(value) {
+      this.sandboxCanvasStyle.widthScale = value;
     },
     setComponentData(componentData = []) {
       this.componentData = componentData;

@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-09-29 15:57:43
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-28 17:25:43
+ * @LastEditTime: 2025-11-05 16:38:49
  * @Description: 编辑器画布核心组件 - 负责渲染画布和组件
 -->
 
@@ -129,7 +129,6 @@ const getShapeItemStyleForComponent = (componentItem: ComponentData) => {
     // 应用缩放比例到样式（只修改返回值，不修改原始数据）
     if (canvasScale !== 1 && componentItem.style) {
       const scaledStyle = { ...baseStyle };
-
       // 缩放位置和尺寸（添加安全检查）
       if (componentItem.style.width !== undefined) {
         scaledStyle.width = `${componentItem.style.width * canvasScale}px`;
@@ -143,7 +142,6 @@ const getShapeItemStyleForComponent = (componentItem: ComponentData) => {
       if (componentItem.style.top !== undefined) {
         scaledStyle.top = `${componentItem.style.top * canvasScale}px`;
       }
-
       return scaledStyle;
     }
   }
