@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-09-29 14:57:20
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-10-28 10:49:28
+ * @LastEditTime: 2025-11-06 10:56:27
  * @Description: 
 -->
 <template>
@@ -15,6 +15,21 @@
       <TestRect />
     </div>
     <el-button type="primary" @click="handlePreview">预览</el-button>
+    <el-button
+      type="primary"
+      @click="handleUndo"
+      :disabled="editorDataStore.sandboxCanvasSnapshotIndex <= 0"
+      >撤销</el-button
+    >
+    <el-button
+      type="primary"
+      @click="handleRedo"
+      :disabled="
+        editorDataStore.sandboxCanvasSnapshotIndex >=
+        editorDataStore.sandboxCanvasSnapshot.length - 1
+      "
+      >重做</el-button
+    >
   </div>
 </template>
 <script setup lang="ts">
@@ -37,6 +52,14 @@ const handlePreview = () => {
 
 const handleDragEnd = () => {
   editorDataStore.setDragStatus("dragOut");
+};
+
+const handleUndo = () => {
+  editorDataStore.undoSandboxSnapshot();
+};
+
+const handleRedo = () => {
+  editorDataStore.redoSandboxSnapshot();
 };
 </script>
 

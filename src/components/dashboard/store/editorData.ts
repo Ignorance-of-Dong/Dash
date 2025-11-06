@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-09-25 19:12:54
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-11-05 15:38:50
+ * @LastEditTime: 2025-11-06 15:01:51
  * @Description:
  */
 import { defineStore } from "pinia";
@@ -26,7 +26,6 @@ export const useEditorDataStore = defineStore("editorData", {
         backgroundColor: null,
         component: {} as any,
       },
-
       editMode: "edit", // 编辑器模式 edit preview
       componentData: [] as any, // 画布组件数据
       curComponent: null as any,
@@ -45,12 +44,14 @@ export const useEditorDataStore = defineStore("editorData", {
         heightScale: 1,
       },
       sandboxCanvasStatus: "idle", // idle 空闲 update 更新
+      sandboxCanvasSnapshot: [], // 快照
+      sandboxCanvasSnapshotIndex: -1, // 快照索引
       sandboxCanvas: {
         left: {
           id: "left",
           width: 400,
           minWidth: 400,
-          height: 0,
+          height: 1080,
           heightType: "auto",
           top: 0,
           left: 0,
@@ -84,7 +85,7 @@ export const useEditorDataStore = defineStore("editorData", {
           id: "right",
           width: 400,
           minWidth: 400,
-          height: 0,
+          height: 1080,
           heightType: "auto",
           top: 0,
           left: 0,
@@ -118,6 +119,41 @@ export const useEditorDataStore = defineStore("editorData", {
     };
   },
   actions: {
+    recordSandboxSnapshot() {
+      if (this.mode === "sandbox") {
+        const newSnapshot = clone(this.sandboxCanvas);
+        this.sandboxCanvasSnapshot[++this.sandboxCanvasSnapshotIndex] =
+          newSnapshot;
+        if (
+          this.sandboxCanvasSnapshotIndex <
+          this.sandboxCanvasSnapshot.length - 1
+        ) {
+          this.sandboxCanvasSnapshot = this.sandboxCanvasSnapshot.slice(
+            0,
+            this.sandboxCanvasSnapshotIndex + 1
+          );
+        }
+      }
+    },
+
+    undoSandboxSnapshot() {
+      if (this.sandboxCanvasSnapshotIndex > 0) {
+        this.sandboxCanvasSnapshotIndex--;
+        this.sandboxCanvas =
+          this.sandboxCanvasSnapshot[this.sandboxCanvasSnapshotIndex];
+      }
+    },
+
+    redoSandboxSnapshot() {
+      if (
+        this.sandboxCanvasSnapshotIndex <
+        this.sandboxCanvasSnapshot.length - 1
+      ) {
+        this.sandboxCanvasSnapshotIndex++;
+        this.sandboxCanvas =
+          this.sandboxCanvasSnapshot[this.sandboxCanvasSnapshotIndex];
+      }
+    },
     setSandboxCanvasStatus(status) {
       this.sandboxCanvasStatus = status;
     },
@@ -147,11 +183,6 @@ export const useEditorDataStore = defineStore("editorData", {
       this.componentData = componentData;
     },
     setCurComponent({ component, index }) {
-      if (!component && this.curComponent) {
-        this.curComponent["editing"] = false;
-        this.curComponent["resizing"] = false;
-        this.curComponent["dragging"] = false;
-      }
       this.curComponent = component;
       this.curComponentIndex = index;
     },

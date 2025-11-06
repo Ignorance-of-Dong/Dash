@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-10-21 17:19:04
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-11-05 18:19:26
+ * @LastEditTime: 2025-11-06 15:05:23
  * @Description: 
 -->
 <template>
@@ -217,7 +217,7 @@ const getPreviewAreaItemStyle = (style: any) => {
     if (isUseWidthScale.value) {
       height = relHeight;
     } else {
-      height = containerHeight;
+      height = style.height * editorDataStore.sandboxCanvasStyle.heightScale;
     }
   }
 
@@ -356,7 +356,7 @@ defineExpose({
   .sandbox-canvas-preview-area-item {
     position: absolute;
     border-radius: 10px;
-    background-color: #edb98b;
+    background: #e9e3e3;
   }
 }
 </style>

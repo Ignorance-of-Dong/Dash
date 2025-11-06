@@ -4,7 +4,7 @@ import { useEditorDataStore } from "../store/editorData";
  * @Author: zhangzheng
  * @Date: 2025-10-22 17:22:01
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-11-05 11:01:08
+ * @LastEditTime: 2025-11-06 18:02:42
  * @Description: 组件位置校正和重叠检测工具函数
  */
 
@@ -370,7 +370,6 @@ export const reArrangeComponents = (
   if (!components || components.length === 0) {
     return canvasData;
   }
-
   // 1. 根据布局类型进行排序
   // 垂直布局：按照 top 值排序（从上到下）
   // 水平布局：按照 left 值排序（从左到右）
@@ -520,15 +519,6 @@ export const reArrangeComponents = (
   // 3. 更新画布数据中的组件顺序
   // canvasData.components = sortedComponents;
   return canvasData;
-};
-
-const getElementPosition = (element) => {
-  const parent = element.parentElement;
-  const elementRect = element.getBoundingClientRect();
-
-  const parentRect = parent.getBoundingClientRect();
-
-  return elementRect;
 };
 
 // sandbox 模式下，在不同布局下拖拽组件导致宽度超出画布宽度时，需要调整画布宽度
@@ -731,4 +721,91 @@ export const adjustCanvasWidth = (
 
     return true;
   }
+};
+
+// 挤压组件（当垂直布局的时候，组件高度发生变化的时候，需要调整其他组件的top的位置, 当水平布局的时候，组件宽度发生变化的时候，需要调整其他组件的left的位置）
+export const adjustComponentPosition = (
+  componentStyle: any,
+  canvasData: any,
+  componentId: string,
+  pos: string,
+  otherData?: any
+) => {
+  const originComponent = otherData.originCanvas.components.find(
+    (item) => item.id === componentId
+  );
+  if (canvasData.layout === "vertical") {
+    // 检测当前组件上下是否有组件，如果上面有组件则无法继续调整
+    // 根据 pos类型来判断 是操作的是哪个位置
+
+    if (pos === "top") {
+      return true;
+    }
+    if (pos === "leftTop" || pos == "rightTop") {
+      if (
+        otherData.resultTop < originComponent.style.top ||
+        otherData.resultTop < 0
+      ) {
+        return {
+          resultTop: originComponent.style.top,
+          resultHeight: originComponent.style.height,
+        };
+      }
+      return true;
+    }
+
+    if (["rightBottom", "leftBottom", "bottom"].includes(pos)) {
+      // if (otherData.resultHeight > originComponent.style.height) {
+      // 获取画布的高度
+      const canvasHeight = canvasData.height;
+      // 获取所有组件的高度 + 组件的top
+      const totalComponentHeight = otherData.originCanvas.components.reduce(
+        (acc, item) => {
+          return acc + item.style.height;
+        },
+        0
+      );
+
+      const componentGapHeight =
+        canvasData.components.length > 1
+          ? canvasData.componentGap * canvasData.components.length
+          : 0;
+
+      // 剩余区域高度 = 画布高度 - 组件高度 - 组件间距高度
+      const totalOccupiedAraeHeight =
+        canvasHeight - (totalComponentHeight + componentGapHeight);
+      // 获取原始组件
+      const originComponet = otherData.originCanvas.components.find(
+        (item) => item.id === componentId
+      );
+
+      // 现在的高度和原来的高度的差值
+      const heightDifference =
+        otherData.resultHeight - originComponet.style.height;
+
+      if (totalOccupiedAraeHeight > heightDifference) {
+        canvasData.components.forEach((item) => {
+          if (item.id !== componentId && item.style.top > otherData.resultTop) {
+            const component = otherData.originCanvas.components.find(
+              (citem) => citem.id === item.id
+            );
+            item.style.top = component.style.top + heightDifference;
+          }
+        });
+      } else {
+        return {
+          resultHeight: componentStyle.height,
+        };
+      }
+      // }
+      return true;
+    }
+  }
+
+  if (canvasData.layout === "horizontal") {
+    if (pos === "leftTop") return true;
+    if (pos === "rightTop") return true;
+  }
+
+  return true;
 };

@@ -7,7 +7,7 @@ import { componentList } from "./../cursorComponent/config";
 
 import { ref } from "vue";
 import type { ResizePointPosition, CanvasComponentStyle } from "../types";
-import { adjustCanvasWidth } from "./correction";
+import { adjustCanvasWidth, adjustComponentPosition } from "./correction";
 import { clone } from "ramda";
 
 /** 点坐标接口 */
@@ -41,7 +41,12 @@ const calcFunctions: Record<ResizePointPosition, Function> = {
 function calculateLeftTop(
   style: CanvasComponentStyle,
   curPosition: Point,
-  pointInfo: PointInfo
+  pointInfo: PointInfo,
+  canvasClient,
+  mode,
+  canvasData,
+  originCanvas,
+  componentId
 ) {
   const { symmetricPoint } = pointInfo;
 
@@ -69,9 +74,28 @@ function calculateLeftTop(
     resultHeight = 50;
     resultTop = style.top || 0;
   }
+  let isChangeComponentStyle: any = true;
+  if (mode == "sandbox") {
+    isChangeComponentStyle = adjustComponentPosition(
+      style,
+      canvasData,
+      componentId,
+      "leftTop",
+      {
+        resultTop: resultTop,
+        originCanvas: originCanvas,
+      }
+    );
+    if (isChangeComponentStyle?.resultTop) {
+      resultTop = isChangeComponentStyle.resultTop;
+    }
+    if (isChangeComponentStyle?.resultHeight) {
+      resultHeight = isChangeComponentStyle.resultHeight;
+    }
+  }
 
   // 确保宽高为正数
-  if (resultWidth > 0 && resultHeight > 0) {
+  if (resultWidth > 0 && resultHeight > 0 && isChangeComponentStyle) {
     style.width = resultWidth;
     style.height = resultHeight;
     style.left = resultLeft;
@@ -80,13 +104,17 @@ function calculateLeftTop(
 }
 
 /**
- * 计算右上角调整 (完成)
+ * 计算右上角调整 (已完成)
  */
 function calculateRightTop(
   style: CanvasComponentStyle,
   curPosition: Point,
   pointInfo: PointInfo,
-  canvasClient
+  canvasClient,
+  mode,
+  canvasData,
+  originCanvas,
+  componentId
 ) {
   const { symmetricPoint } = pointInfo;
 
@@ -99,19 +127,11 @@ function calculateRightTop(
   let resultTop = Math.round(symmetricPoint.y - newHeight);
 
   const topSpace = resultTop < 0 ? 0 : resultTop;
+  const bottomSpace = canvasClient.height - resultTop - resultHeight;
+
   // 正确
   if (curPosition.x - symmetricPoint.x > canvasClient.width - resultLeft) {
     resultWidth = canvasClient.width - resultLeft;
-  }
-
-  const bottomSpace = canvasClient.height - resultTop - resultHeight;
-
-  if (
-    symmetricPoint.y - curPosition.y >
-    canvasClient.height - bottomSpace - topSpace
-  ) {
-    resultTop = 0;
-    resultHeight = canvasClient.height - bottomSpace - topSpace;
   }
 
   if (resultWidth < 50) {
@@ -123,7 +143,27 @@ function calculateRightTop(
     resultTop = style.top || 0;
   }
 
-  if (resultWidth > 0 && resultHeight > 0) {
+  let isChangeComponentStyle: any = true;
+  if (mode == "sandbox") {
+    isChangeComponentStyle = adjustComponentPosition(
+      style,
+      canvasData,
+      componentId,
+      "rightTop",
+      {
+        resultTop: resultTop,
+        originCanvas: originCanvas,
+      }
+    );
+    if (isChangeComponentStyle?.resultTop) {
+      resultTop = isChangeComponentStyle.resultTop;
+    }
+    if (isChangeComponentStyle?.resultHeight) {
+      resultHeight = isChangeComponentStyle.resultHeight;
+    }
+  }
+
+  if (resultWidth > 0 && resultHeight > 0 && isChangeComponentStyle) {
     style.width = resultWidth;
     style.height = resultHeight;
     style.left = resultLeft;
@@ -138,7 +178,11 @@ function calculateRightBottom(
   style: CanvasComponentStyle,
   curPosition: Point,
   pointInfo: PointInfo,
-  canvasClient
+  canvasClient,
+  mode,
+  canvasData,
+  originCanvas,
+  componentId
 ) {
   const { symmetricPoint } = pointInfo;
 
@@ -156,7 +200,37 @@ function calculateRightBottom(
     resultHeight = canvasClient.height - resultTop;
   }
 
-  if (resultWidth > 0 && resultHeight > 0) {
+  if (resultWidth < 50) {
+    resultWidth = 50;
+    resultLeft = style.left || 0;
+  }
+  if (resultHeight < 50) {
+    resultHeight = 50;
+    resultTop = style.top || 0;
+  }
+
+  let isChangeComponentStyle: any = true;
+  if (mode == "sandbox") {
+    isChangeComponentStyle = adjustComponentPosition(
+      style,
+      canvasData,
+      componentId,
+      "rightBottom",
+      {
+        resultHeight: resultHeight,
+        originCanvas: originCanvas,
+        resultTop: resultTop,
+      }
+    );
+    if (isChangeComponentStyle?.resultTop) {
+      resultTop = isChangeComponentStyle.resultTop;
+    }
+    if (isChangeComponentStyle?.resultHeight) {
+      resultHeight = isChangeComponentStyle.resultHeight;
+    }
+  }
+
+  if (resultWidth > 0 && resultHeight > 0 && isChangeComponentStyle) {
     style.width = resultWidth;
     style.height = resultHeight;
     style.left = resultLeft;
@@ -171,7 +245,11 @@ function calculateLeftBottom(
   style: CanvasComponentStyle,
   curPosition: Point,
   pointInfo: PointInfo,
-  canvasClient
+  canvasClient,
+  mode,
+  canvasData,
+  originCanvas,
+  componentId
 ) {
   const { symmetricPoint } = pointInfo;
 
@@ -198,8 +276,27 @@ function calculateLeftBottom(
     resultHeight = 50;
     resultTop = style.top || 0;
   }
-
-  if (resultWidth > 0 && resultHeight > 0) {
+  let isChangeComponentStyle: any = true;
+  if (mode == "sandbox") {
+    isChangeComponentStyle = adjustComponentPosition(
+      style,
+      canvasData,
+      componentId,
+      "leftBottom",
+      {
+        resultHeight: resultHeight,
+        originCanvas: originCanvas,
+        resultTop: resultTop,
+      }
+    );
+    if (isChangeComponentStyle?.resultTop) {
+      resultTop = isChangeComponentStyle.resultTop;
+    }
+    if (isChangeComponentStyle?.resultHeight) {
+      resultHeight = isChangeComponentStyle.resultHeight;
+    }
+  }
+  if (resultWidth > 0 && resultHeight > 0 && isChangeComponentStyle) {
     style.width = resultWidth;
     style.height = resultHeight;
     style.left = resultLeft;
@@ -208,13 +305,17 @@ function calculateLeftBottom(
 }
 
 /**
- * 计算上边调整(已完成)
+ * 计算上边调整(未完成)
  */
 function calculateTop(
   style: CanvasComponentStyle,
   curPosition: Point,
   pointInfo: PointInfo,
-  canvasClient
+  canvasClient,
+  mode,
+  canvasData,
+  originCanvas,
+  componentId
 ) {
   const { symmetricPoint, center } = pointInfo;
 
@@ -235,7 +336,20 @@ function calculateTop(
     resultHeight = 50;
     resultTop = style.top || 0;
   }
-  if (resultHeight > 0) {
+  let isChangeComponentStyle: any = true;
+  if (mode == "sandbox") {
+    isChangeComponentStyle = adjustComponentPosition(
+      style,
+      canvasData,
+      componentId,
+      "top",
+      {
+        resultTop: resultTop,
+        originCanvas: originCanvas,
+      }
+    );
+  }
+  if (resultHeight > 0 && isChangeComponentStyle) {
     style.height = resultHeight;
     style.top = resultTop;
     style.left = resultLeft;
@@ -308,7 +422,11 @@ function calculateBottom(
   style: CanvasComponentStyle,
   curPosition: Point,
   pointInfo: PointInfo,
-  canvasClient
+  canvasClient,
+  mode,
+  canvasData,
+  originCanvas,
+  componentId
 ) {
   const { symmetricPoint, center } = pointInfo;
 
@@ -327,7 +445,28 @@ function calculateBottom(
     resultTop = style.top || 0;
   }
 
-  if (resultHeight > 0) {
+  let isChangeComponentStyle: any = true;
+  if (mode == "sandbox") {
+    isChangeComponentStyle = adjustComponentPosition(
+      style,
+      canvasData,
+      componentId,
+      "bottom",
+      {
+        resultHeight: resultHeight,
+        originCanvas: originCanvas,
+        resultTop: resultTop,
+      }
+    );
+    if (isChangeComponentStyle?.resultTop) {
+      resultTop = isChangeComponentStyle.resultTop;
+    }
+    if (isChangeComponentStyle?.resultHeight) {
+      resultHeight = isChangeComponentStyle.resultHeight;
+    }
+  }
+
+  if (resultHeight > 0 && isChangeComponentStyle) {
     style.height = resultHeight;
     style.top = resultTop;
     style.left = resultLeft;

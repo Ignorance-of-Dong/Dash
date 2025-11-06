@@ -2,7 +2,7 @@
  * @Author: zhangzheng
  * @Date: 2025-10-14 17:28:22
  * @LastEditors: zhangzheng
- * @LastEditTime: 2025-11-04 11:17:45
+ * @LastEditTime: 2025-11-06 18:06:37
 -->
 <template>
   <div
@@ -206,8 +206,7 @@ const handleMouseDownOnPoint = (
       isFirst = false;
       return;
     }
-editorDataStore.setSandboxCanvasStatus("update");
-
+    editorDataStore.setSandboxCanvasStatus("update");
 
     // 获取缩放比例
     const canvasStyleScale =
@@ -254,31 +253,6 @@ editorDataStore.setSandboxCanvasStatus("update");
 
     editorDataStore.setDragStatus("dragIn");
 
-    if (editorDataStore.mode == "sandbox") {
-      if (canvasData.layout == "vertical") {
-        reArrangeComponents(canvasData, canvasData.layout);
-        const componentLength = canvasData?.components.length;
-
-        const totalComponentHeight = canvasData.components
-          .filter((component) => component.id !== props.element.id)
-          .reduce((acc, component) => acc + component.style.height, 0);
-        const totalGapHeight =
-          componentLength >= 2
-            ? (componentLength - 1) * canvasData?.componentGap
-            : 0;
-
-        // 使用真实画布高度（realClientRect 已经反推为真实尺寸）
-        const totalOccupiedAraeHeight =
-          realClientRect.height -
-          totalComponentHeight -
-          style.height -
-          totalGapHeight;
-        if (totalOccupiedAraeHeight <= 0) {
-          return;
-        }
-      }
-    }
-
     // 更新组件样式（这里的 style 是真实坐标，未经过缩放）✅
     Object.assign(props.element.style, style);
   };
@@ -289,10 +263,12 @@ editorDataStore.setSandboxCanvasStatus("update");
     document.removeEventListener("mouseup", handleMouseUp);
     editorDataStore.setDragStatus("idle");
 
-    // if (editorDataStore.mode == "sandbox") {
-    //   const canvasData = editorDataStore.sandboxCanvas[props.canvasId];
-    //   reArrangeComponents(canvasData, canvasData.layout);
-    // }
+    if (editorDataStore.mode == "sandbox") {
+      const canvasData = editorDataStore.sandboxCanvas[props.canvasId];
+      reArrangeComponents(canvasData, canvasData.layout);
+
+      editorDataStore.recordSandboxSnapshot();
+    }
     // 调整完成后的回调处理
     console.log("调整完成:", style);
   };
@@ -374,7 +350,6 @@ const handleInnerMouseDownOnShape = (e) => {
   const up = () => {
     document.removeEventListener("mousemove", move);
     document.removeEventListener("mouseup", up);
-    console.log("[ components ] >", editorDataStore.componentData);
 
     if (editorDataStore.mode == "sandbox") {
       const canvasData = editorDataStore.sandboxCanvas[props.canvasId];
@@ -384,9 +359,9 @@ const handleInnerMouseDownOnShape = (e) => {
         canvasData,
         props.element.id
       );
-      console.log("[ resultStyle ] >", resultStyle);
       editorDataStore.setShapeStyle(resultStyle as any);
       reArrangeComponents(canvasData, canvasData.layout);
+      editorDataStore.recordSandboxSnapshot();
     }
     editorDataStore.setDragStatus("idle");
   };
