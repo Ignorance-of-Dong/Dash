@@ -53,7 +53,7 @@ import { EditorState } from "./types";
 import { useEditorDataStore } from "./store/editorData";
 import { storeToRefs } from "pinia";
 import EditorCanvasCore from "./components/EditorCanvasCore.vue";
-import { changeComponentSizeWithScale } from "./utils/changeComponentsSizeWithScale";
+import { changeComponentSizeWithScale } from "./utils/componentScaleAdapter";
 import { v4 as uuidv4 } from "uuid";
 import { componentList } from "./cursorComponent/config";
 import { clone } from "ramda";
@@ -61,7 +61,7 @@ import SandboxPreviewPanel from "./preview/SandboxPreviewPanel.vue";
 import {
   correctionComponentPosition,
   getRemainingArae,
-} from "./utils/correction";
+} from "./utils/canvasLayoutManager";
 import { computed } from "vue";
 
 // 从主数据 Store 解构响应式数据

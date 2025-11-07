@@ -62,7 +62,7 @@ import { FullScreen, ZoomOut, ZoomIn } from "@element-plus/icons-vue";
 import { useEditorDataStore } from "../store/editorData";
 import { storeToRefs } from "pinia";
 import { ref, onMounted, onUnmounted, nextTick } from "vue";
-import { changeComponentsSizeWithScaleUtil } from "../utils/changeComponentsSizeWithScale";
+import { changeComponentsSizeWithScaleUtil } from "../utils/componentScaleAdapter";
 
 const { changeSizeWithScale, changeSizeWithScaleAdaptor } =
   changeComponentsSizeWithScaleUtil();

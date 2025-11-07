@@ -30,7 +30,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useEditorDataStore } from "../store/editorData";
-import calculateSimpleComponentPositionAndSize from "../utils/simpleCalc";
+import handleComponentResizeByPoint from "../utils/componentResizeHandler";
 import type {
   ResizePointPosition,
   CursorStyle,
@@ -38,7 +38,10 @@ import type {
 } from "../types";
 import { CANVAS_CONSTANTS } from "../types";
 import { watch } from "vue";
-import { positionChange, reArrangeComponents } from "../utils/correction";
+import {
+  positionChange,
+  reArrangeComponents,
+} from "../utils/canvasLayoutManager";
 import { clone } from "ramda";
 const props = defineProps<{
   element: any;
@@ -198,7 +201,9 @@ const handleMouseDownOnPoint = (
 
   let isFirst = true;
 
-  const originCanvas = clone(editorDataStore.sandboxCanvas[props.canvasId]);
+  const originalCanvasData = clone(
+    editorDataStore.sandboxCanvas[props.canvasId]
+  );
 
   // 鼠标移动处理函数
   const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -235,7 +240,7 @@ const handleMouseDownOnPoint = (
       height: clientRect.height / canvasStyleScale,
     };
 
-    calculateSimpleComponentPositionAndSize(
+    handleComponentResizeByPoint(
       realClientRect,
       point,
       style,
@@ -247,7 +252,7 @@ const handleMouseDownOnPoint = (
       },
       editorDataStore.mode,
       canvasData,
-      originCanvas,
+      originalCanvasData,
       props.element.id
     );
 

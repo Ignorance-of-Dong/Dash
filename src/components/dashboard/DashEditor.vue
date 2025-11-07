@@ -111,10 +111,10 @@ import EditorToolBar from "./components/EditorToolBar.vue";
 import { useEditorDataStore } from "./store/editorData";
 
 // 工具函数导入
-import { shortcutKey } from "./utils/DeShortcutKey";
+import { shortcutKey } from "./utils/keyboardShortcuts";
 import { useEmitt } from "./hooks/useEmitt";
-import { findDragComponent } from "./utils/canvasUtils";
-import { changeComponentSizeWithScale } from "./utils/changeComponentsSizeWithScale";
+import { findDragComponent } from "./utils/componentFinder";
+import { changeComponentSizeWithScale } from "./utils/componentScaleAdapter";
 
 // 类型导入
 import type { DragState, EditorState, ScrollEvent } from "./types";

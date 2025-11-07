@@ -51,8 +51,8 @@ import type {
 } from "../types";
 import { CANVAS_CONSTANTS } from "../types";
 // 样式工具函数
-import { getCanvasStyle, getShapeItemStyle, getStyle } from "../utils/style";
-import { changeStyleWithScale } from "../utils/translate";
+import { getCanvasStyle, getShapeItemStyle, getStyle } from "../utils/styleGenerator";
+import { changeStyleWithScale } from "../utils/mathUtils";
 import { useEditorDataStore } from "../store/editorData";
 import EditorShape from "./EditorShape.vue";
 import { SANDBOX_EDITOR_DEFAULT_PREVIEW_AREA_ITEM } from "../config";

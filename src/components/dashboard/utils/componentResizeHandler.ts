@@ -6,10 +6,7 @@
 
 import { ref } from "vue";
 import type { ResizePointPosition, CanvasComponentStyle } from "../types";
-import {
-  adjustCanvasWidth,
-  adjustComponentPosition,
-} from "./canvasLayoutManager";
+import { adjustCanvasWidth, adjustComponentPosition } from "./canvasLayoutManager";
 import { clone } from "ramda";
 
 /** 点坐标接口 */

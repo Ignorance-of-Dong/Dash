@@ -584,7 +584,7 @@ export const adjustCanvasWidth = (
     const componentAllSpace = triggerCanvas.components
       .filter((item) => item.id !== otherData.componentId)
       .map((item) => {
-        const componentItem = otherData.originCanvas.components.find(
+        const componentItem = otherData.originalCanvasData.components.find(
           (citem) => citem.id === item.id
         );
         return (
@@ -651,8 +651,8 @@ export const adjustCanvasWidth = (
     }, -Infinity);
 
     const leftBuffer =
-      otherData.originCanvas.left + otherData.newLeft * canvasStyleScale;
-    const widthBuffer = otherData.originCanvas.width - otherData.newLeft;
+      otherData.originalCanvasData.left + otherData.newLeft * canvasStyleScale;
+    const widthBuffer = otherData.originalCanvasData.width - otherData.newLeft;
 
     // 障碍物判定
     if (leftBuffer <= obstacleRight * canvasStyleScale) {
@@ -672,11 +672,11 @@ export const adjustCanvasWidth = (
           item.style.left = 0;
         }
 
-        const componentItem = otherData.originCanvas.components.find(
+        const componentItem = otherData.originalCanvasData.components.find(
           (citem) => citem.id === item.id
         );
         const rightSpace =
-          otherData.originCanvas.width -
+          otherData.originalCanvasData.width -
           (Math.round(componentItem.style.width) +
             (componentItem.style.left < 0 ? 0 : componentItem.style.left));
         return Math.round(item.style.width) + (rightSpace < 0 ? 0 : rightSpace);
@@ -698,19 +698,19 @@ export const adjustCanvasWidth = (
 
     if (
       otherData.newLeft <= 0 ||
-      triggerCanvas.width > otherData.originCanvas.minWidth
+      triggerCanvas.width > otherData.originalCanvasData.minWidth
     ) {
       triggerCanvas.left = leftBuffer;
       triggerCanvas.width = widthBuffer;
       componentStyle.left = 0;
-      otherData.originCanvas.components.forEach((item) => {
+      otherData.originalCanvasData.components.forEach((item) => {
         if (item.id !== otherData.componentId) {
           const component = triggerCanvas.components.find(
             (component) => component.id === item.id
           );
           const left =
             item.style.left +
-            (otherData.originCanvas.left - leftBuffer) / canvasStyleScale;
+            (otherData.originalCanvasData.left - leftBuffer) / canvasStyleScale;
           component.style.left = left < 0 ? 0 : Math.round(left);
         }
       });
@@ -731,7 +731,7 @@ export const adjustComponentPosition = (
   pos: string,
   otherData?: any
 ) => {
-  const originComponent = otherData.originCanvas.components.find(
+  const originComponent = otherData.originalCanvasData.components.find(
     (item) => item.id === componentId
   );
   if (canvasData.layout === "vertical") {
@@ -759,12 +759,10 @@ export const adjustComponentPosition = (
       // 获取画布的高度
       const canvasHeight = canvasData.height;
       // 获取所有组件的高度 + 组件的top
-      const totalComponentHeight = otherData.originCanvas.components.reduce(
-        (acc, item) => {
+      const totalComponentHeight =
+        otherData.originalCanvasData.components.reduce((acc, item) => {
           return acc + item.style.height;
-        },
-        0
-      );
+        }, 0);
 
       const componentGapHeight =
         canvasData.components.length > 1
@@ -775,7 +773,7 @@ export const adjustComponentPosition = (
       const totalOccupiedAraeHeight =
         canvasHeight - (totalComponentHeight + componentGapHeight);
       // 获取原始组件
-      const originComponet = otherData.originCanvas.components.find(
+      const originComponet = otherData.originalCanvasData.components.find(
         (item) => item.id === componentId
       );
 
@@ -786,7 +784,7 @@ export const adjustComponentPosition = (
       if (totalOccupiedAraeHeight > heightDifference) {
         canvasData.components.forEach((item) => {
           if (item.id !== componentId && item.style.top > otherData.resultTop) {
-            const component = otherData.originCanvas.components.find(
+            const component = otherData.originalCanvasData.components.find(
               (citem) => citem.id === item.id
             );
             item.style.top = component.style.top + heightDifference;

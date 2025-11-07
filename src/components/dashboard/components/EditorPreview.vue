@@ -36,7 +36,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useEditorDataStore } from "../store/editorData";
-import { getShapeItemStyle } from "../utils/style";
+import { getShapeItemStyle } from "../utils/styleGenerator";
 import { clone } from "ramda";
 
 const editorDataStore = useEditorDataStore();
